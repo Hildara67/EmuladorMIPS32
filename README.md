@@ -232,16 +232,36 @@ proyector):
 
 | Color | Significado |
 |-------|-------------|
-| Lavanda (`#C3A6F0`) | Etapa activa durante la ejecución. |
-| Beige (`#E7D9C6`) | Etapa inactiva. |
-| Menta (`#A8E6B8`) | Badge **FIN** (estado `FINALIZADO`). |
-| Rosa (`#FFB0C8`) | Badge **ERROR** (estado `ERROR`). |
+| Lavanda (`#B79BF0`) | Etapa activa durante la ejecución. |
+| Beige (`#D9CBB6`) | Etapa inactiva. |
+| Menta (`#8CE0A4`) | Badge **FIN** (estado `FINALIZADO`). |
+| Rosa (`#FF9DB8`) | Badge **ERROR** (estado `ERROR`). |
 | Amarillo (`#FFE066`) | Registro modificado. |
-| Durazno (`#FFD1A1`) | Celda de RAM modificada en la última acción. |
-| Lavanda (`#CFB8F5`) | Última celda de RAM consultada/modificada. |
-| Latte (`#F0E2CF`) | Fondo general de la ventana. |
-| Crema (`#FBF2E4`) | Tablas y áreas de texto. |
-| Lavanda (`#CDB6F5`) | Botones y encabezados de tabla. |
+| Durazno (`#FFC98A`) | Celda de RAM modificada en la última acción. |
+| Celeste (`#9FDBF5`) | Última celda de RAM consultada/modificada. |
+| Latte (`#EAD8C0`) | Fondo general de la ventana. |
+| Crema (`#FDF6EA`) | Tablas y áreas de texto. |
+| Lavanda (`#CDB6F5`) | Botones. |
+| Café latte (`#D8BE9E`) | Encabezados de tabla. |
+
+**Fondos por sección** (cada zona con su propio color, para que la interfaz no
+se vea plana):
+
+| Sección | Color |
+|---------|-------|
+| Barra superior | Lavanda claro (`#E3D2F5`) |
+| Memoria de registros | Celeste claro (`#D8ECFA`) |
+| RAM | Durazno claro (`#FBE3C8`) |
+| Vistas secundarias | Menta claro (`#DCF3E4`) |
+| Barra inferior | Beige (`#EFDFC8`) |
+
+Cada tipo de resaltado usa un color **distinto** (amarillo, durazno y celeste)
+y los encabezados de tabla van en café latte, de modo que ninguna celda se
+confunda con el encabezado.
+
+**Limpieza de resaltados:** al pulsar **Reiniciar** (o al cargar un programa
+nuevo) se borran los resaltados de la corrida anterior —registros modificados
+en amarillo y celdas de RAM— para que la vista empiece limpia.
 
 **Indicador de etapas:** durante la ejecución se resalta la etapa real. Al
 terminar, las cinco etapas se apagan, aparece un badge **FIN** (menta) o
