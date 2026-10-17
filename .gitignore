@@ -1,0 +1,27 @@
+# ========================
+# Build (archivos compilados)
+# ========================
+build/
+dist/
+out/
+
+# Clases compiladas sueltas
+*.class
+
+# ========================
+# NetBeans
+# ========================
+# Configuración privada (rutas locales de cada máquina)
+nbproject/private/
+
+# ========================
+# Sistema / editores
+# ========================
+.DS_Store
+Thumbs.db
+sources.txt
+
+# Logs y temporales
+*.log
+*.tmp
+*~
