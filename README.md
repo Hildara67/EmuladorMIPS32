@@ -226,21 +226,25 @@ Distribución: panel superior (carga/estado + botones), centro dividido
 - **Pestañas secundarias:** Memoria de instrucciones, ROM, Disco duro,
   ALU / HI-LO y Log de etapas.
 
-**Colores:**
+**Colores** (paleta pastel *"Miel, Latte & Lavanda"*, diseñada con fondos
+claros y texto oscuro para que se lea bien incluso con luz ambiental o
+proyector):
 
 | Color | Significado |
 |-------|-------------|
-| Azul (`#1E88E5`) | Etapa activa durante la ejecución. |
-| Gris (`#E0E0E0`) | Etapa inactiva. |
-| Verde (`#2E7D32`) | Badge **FIN** (estado `FINALIZADO`). |
-| Rojo (`#C62828`) | Badge **ERROR** (estado `ERROR`). |
-| Verde claro | Registro modificado. |
-| Naranja | Celda de RAM modificada en la última acción. |
-| Azul claro | Última celda de RAM consultada/modificada. |
+| Lavanda (`#D8CCF7`) | Etapa activa durante la ejecución. |
+| Beige (`#F1EBE2`) | Etapa inactiva. |
+| Menta (`#CDEFD6`) | Badge **FIN** (estado `FINALIZADO`). |
+| Rosa (`#FFC9D6`) | Badge **ERROR** (estado `ERROR`). |
+| Amarillo pastel (`#FFF3B0`) | Registro modificado. |
+| Durazno/latte (`#F5DCC0`) | Celda de RAM modificada en la última acción. |
+| Lavanda claro (`#DCCCFA`) | Última celda de RAM consultada/modificada. |
+| Off-white cálido (`#FBF7F0`) | Fondo general de la ventana. |
+| Lavanda (`#E4DAFB`) | Botones y encabezados de tabla. |
 
 **Indicador de etapas:** durante la ejecución se resalta la etapa real. Al
-terminar, las cinco etapas se apagan, aparece un badge **FIN** (verde) o
-**ERROR** (rojo) y, por separado, se muestra la **última etapa procesada**.
+terminar, las cinco etapas se apagan, aparece un badge **FIN** (menta) o
+**ERROR** (rosa) y, por separado, se muestra la **última etapa procesada**.
 
 **Contadores (miden cosas distintas):**
 

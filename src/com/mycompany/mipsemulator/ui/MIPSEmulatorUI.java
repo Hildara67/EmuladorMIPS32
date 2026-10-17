@@ -24,6 +24,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
+import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -35,6 +36,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.LayoutManager;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
@@ -51,13 +53,39 @@ public class MIPSEmulatorUI extends JFrame {
     private static final int ALTO_FILA_REGISTRO = 18;
     private static final int ALTO_FILA_RAM = 20;
 
-    private static final Color COLOR_ACTIVO = new Color(0x1E88E5);
-    private static final Color COLOR_INACTIVO = new Color(0xE0E0E0);
-    private static final Color COLOR_FIN = new Color(0x2E7D32);
-    private static final Color COLOR_ERROR = new Color(0xC62828);
-    private static final Color COLOR_REG_MOD = new Color(0xDDF5DD);
-    private static final Color COLOR_RAM_MOD = new Color(0xFFE0B2);
-    private static final Color COLOR_RAM_CONSULTA = new Color(0xBBE1FA);
+    // --------------------------------------------------------------
+    // Paleta "Miel, Latte & Lavanda" (diseñada para verse bien incluso
+    // con luz ambiental / proyector: fondos pastel + texto oscuro).
+    // --------------------------------------------------------------
+    // Base
+    private static final Color COLOR_FONDO = new Color(0xFBF7F0);      // fondo general cálido
+    private static final Color COLOR_PANEL = new Color(0xFFFFFF);      // tablas y áreas de texto
+    private static final Color COLOR_BORDE = new Color(0xE8DFD3);      // bordes y rejas latte
+    private static final Color COLOR_TEXTO = new Color(0x3A2E27);      // texto principal (café)
+    private static final Color COLOR_TEXTO_SEC = new Color(0x7A6A5F);  // texto secundario
+    private static final Color COLOR_TITULO = new Color(0x5C4A3F);     // títulos de panel
+
+    // Etapas y badges de estado
+    private static final Color COLOR_ACTIVO = new Color(0xD8CCF7);        // etapa activa (lavanda)
+    private static final Color COLOR_ACTIVO_TEXTO = new Color(0x4A3173);  // texto lavanda oscuro
+    private static final Color COLOR_INACTIVO = new Color(0xF1EBE2);      // etapa inactiva (beige)
+    private static final Color COLOR_INACTIVO_TEXTO = new Color(0x8A7C6E);
+    private static final Color COLOR_FIN = new Color(0xCDEFD6);           // badge FIN (menta)
+    private static final Color COLOR_FIN_TEXTO = new Color(0x1E6B34);
+    private static final Color COLOR_ERROR = new Color(0xFFC9D6);         // badge ERROR (rosa)
+    private static final Color COLOR_ERROR_TEXTO = new Color(0xA32C4A);
+    private static final Color COLOR_LISTO_TEXTO = new Color(0x6B5400);   // estado LISTO (miel)
+
+    // Resaltados de datos
+    private static final Color COLOR_REG_MOD = new Color(0xFFF3B0);       // registro modificado (amarillo)
+    private static final Color COLOR_RAM_MOD = new Color(0xF5DCC0);       // RAM modificada (durazno)
+    private static final Color COLOR_RAM_CONSULTA = new Color(0xDCCCFA);  // RAM consultada (lavanda)
+    private static final Color COLOR_FILA_CERO = new Color(0xF3EEE6);     // fila de $zero
+
+    // Controles
+    private static final Color COLOR_BOTON = new Color(0xE4DAFB);         // botones (lavanda)
+    private static final Color COLOR_BOTON_TEXTO = new Color(0x3D2B63);
+    private static final Color COLOR_BOTON_BORDE = new Color(0xB39DDB);
 
     private final transient CPU cpu = new CPU();
 
@@ -109,6 +137,7 @@ public class MIPSEmulatorUI extends JFrame {
         setMinimumSize(new Dimension(1100, 700));
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(8, 8));
+        getContentPane().setBackground(COLOR_FONDO);
 
         modeloRegistros = modeloNoEditable("Nombre", "Índice", "Hexadecimal", "Decimal");
         modeloInstrucciones = modeloNoEditable("Índice", "Dirección", "Binario (32 bits)", "Mnemónico");
@@ -130,10 +159,16 @@ public class MIPSEmulatorUI extends JFrame {
     // Construcción de la interfaz
     // ------------------------------------------------------------------
     private JPanel crearPanelSuperior() {
-        JPanel panel = new JPanel(new BorderLayout(8, 6));
+        JPanel panel = nuevoPanel(new BorderLayout(8, 6));
         panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 0, 8));
 
-        JPanel fila1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
+        estilizarBoton(btnCargar);
+        estilizarBoton(btnEjecutar);
+        estilizarBoton(btnEtapa);
+        estilizarBoton(btnTodo);
+        estilizarBoton(btnReiniciar);
+
+        JPanel fila1 = nuevoPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
         fila1.add(btnCargar);
         fila1.add(new JLabel("Archivo:"));
         fila1.add(lblArchivo);
@@ -142,13 +177,13 @@ public class MIPSEmulatorUI extends JFrame {
         lblEstado.setFont(new Font("Monospaced", Font.BOLD, 13));
         fila1.add(lblEstado);
 
-        JPanel fila2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel fila2 = nuevoPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         fila2.add(btnEjecutar);
         fila2.add(btnEtapa);
         fila2.add(btnTodo);
         fila2.add(btnReiniciar);
 
-        JPanel filas = new JPanel();
+        JPanel filas = nuevoPanel();
         filas.setLayout(new BoxLayout(filas, BoxLayout.Y_AXIS));
         fila1.setAlignmentX(Component.LEFT_ALIGNMENT);
         fila2.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -165,33 +200,36 @@ public class MIPSEmulatorUI extends JFrame {
         derecha.setResizeWeight(0.45);
         derecha.setContinuousLayout(true);
         derecha.setDividerLocation(300);
+        derecha.setBackground(COLOR_FONDO);
 
         JSplitPane principal = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
                 crearPanelRegistros(), derecha);
         principal.setResizeWeight(0.0);
         principal.setContinuousLayout(true);
         principal.setDividerLocation(430);
+        principal.setBackground(COLOR_FONDO);
 
-        JPanel panel = new JPanel(new BorderLayout());
+        JPanel panel = nuevoPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
         panel.add(principal, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel crearPanelRegistros() {
-        JPanel panel = new JPanel(new BorderLayout(0, 4));
-        panel.setBorder(BorderFactory.createTitledBorder("Memoria de registros (32 registros)"));
+        JPanel panel = nuevoPanel(new BorderLayout(0, 4));
+        panel.setBorder(bordeTitulo("Memoria de registros (32 registros)"));
 
         tablaRegistros.setModel(modeloRegistros);
+        estilizarTabla(tablaRegistros);
         tablaRegistros.setRowHeight(ALTO_FILA_REGISTRO);
         tablaRegistros.setFont(new Font("Monospaced", Font.PLAIN, 11));
         tablaRegistros.setDefaultRenderer(Object.class, new RegistroRenderer());
-        JScrollPane scroll = new JScrollPane(tablaRegistros);
+        JScrollPane scroll = estilizarScroll(new JScrollPane(tablaRegistros));
         scroll.getVerticalScrollBar().setUnitIncrement(ALTO_FILA_REGISTRO);
         panel.add(scroll, BorderLayout.CENTER);
 
-        JPanel especiales = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
-        especiales.setBorder(BorderFactory.createTitledBorder("Registros especiales"));
+        JPanel especiales = nuevoPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
+        especiales.setBorder(bordeTitulo("Registros especiales"));
         Font mono = new Font("Monospaced", Font.BOLD, 13);
         lblHI.setFont(mono);
         lblLO.setFont(mono);
@@ -206,11 +244,12 @@ public class MIPSEmulatorUI extends JFrame {
     }
 
     private JPanel crearPanelRAM() {
-        JPanel panel = new JPanel(new BorderLayout(0, 4));
-        panel.setBorder(BorderFactory.createTitledBorder(
+        JPanel panel = nuevoPanel(new BorderLayout(0, 4));
+        panel.setBorder(bordeTitulo(
                 "RAM")); // (100 palabras de 32 bits; direcciones 0x00000000 - 0x0000018C)
 
         tablaRAM.setModel(modeloRAM);
+        estilizarTabla(tablaRAM);
         tablaRAM.setRowHeight(ALTO_FILA_RAM);
         tablaRAM.setFont(new Font("Monospaced", Font.PLAIN, 12));
         tablaRAM.setDefaultRenderer(Object.class, new RAMRenderer());
@@ -220,13 +259,14 @@ public class MIPSEmulatorUI extends JFrame {
         tablaRAM.getColumnModel().getColumn(0).setPreferredWidth(150);
         tablaRAM.getColumnModel().getColumn(1).setPreferredWidth(150);
 
-        JScrollPane scroll = new JScrollPane(tablaRAM);
+        JScrollPane scroll = estilizarScroll(new JScrollPane(tablaRAM));
         scroll.getVerticalScrollBar().setUnitIncrement(ALTO_FILA_RAM);
         panel.add(scroll, BorderLayout.CENTER);
 
-        JLabel leyenda = new JLabel("Naranja = última celda modificada.  "
-                + "Azul = última celda consultada.");
+        JLabel leyenda = new JLabel("Durazno = última celda modificada.  "
+                + "Lavanda = última celda consultada.");
         leyenda.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        leyenda.setForeground(COLOR_TEXTO_SEC);
         panel.add(leyenda, BorderLayout.SOUTH);
 
         return panel;
@@ -234,32 +274,40 @@ public class MIPSEmulatorUI extends JFrame {
 
     private JPanel crearPanelPestanias() {
         JTabbedPane tabs = new JTabbedPane();
+        tabs.setBackground(COLOR_FONDO);
+        tabs.setForeground(COLOR_TEXTO);
 
-        tabs.addTab("Memoria de instrucciones", new JScrollPane(tablaCon(modeloInstrucciones)));
-        tabs.addTab("ROM", new JScrollPane(tablaCon(modeloROM)));
-        tabs.addTab("Disco duro", new JScrollPane(tablaCon(modeloDisco)));
+        tabs.addTab("Memoria de instrucciones", estilizarScroll(new JScrollPane(tablaCon(modeloInstrucciones))));
+        tabs.addTab("ROM", estilizarScroll(new JScrollPane(tablaCon(modeloROM))));
+        tabs.addTab("Disco duro", estilizarScroll(new JScrollPane(tablaCon(modeloDisco))));
 
         areaALU.setEditable(false);
         areaALU.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        tabs.addTab("ALU / HI-LO", new JScrollPane(areaALU));
+        areaALU.setBackground(COLOR_PANEL);
+        areaALU.setForeground(COLOR_TEXTO);
+        areaALU.setCaretColor(COLOR_TEXTO);
+        tabs.addTab("ALU / HI-LO", estilizarScroll(new JScrollPane(areaALU)));
 
         areaLog.setEditable(false);
         areaLog.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        tabs.addTab("Log de etapas", new JScrollPane(areaLog));
+        areaLog.setBackground(COLOR_PANEL);
+        areaLog.setForeground(COLOR_TEXTO);
+        areaLog.setCaretColor(COLOR_TEXTO);
+        tabs.addTab("Log de etapas", estilizarScroll(new JScrollPane(areaLog)));
 
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Vistas secundarias"));
+        JPanel panel = nuevoPanel(new BorderLayout());
+        panel.setBorder(bordeTitulo("Vistas secundarias"));
         panel.add(tabs, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel crearPanelInferior() {
-        JPanel panel = new JPanel(new BorderLayout(6, 4));
+        JPanel panel = nuevoPanel(new BorderLayout(6, 4));
         panel.setBorder(BorderFactory.createEmptyBorder(0, 8, 8, 8));
 
-        JPanel info = new JPanel(new GridLayout(3, 1, 4, 2));
+        JPanel info = nuevoPanel(new GridLayout(3, 1, 4, 2));
 
-        JPanel filaPC = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel filaPC = nuevoPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         Font mono = new Font("Monospaced", Font.BOLD, 13);
         lblPC.setFont(mono);
         lblInstruccion.setFont(mono);
@@ -281,7 +329,7 @@ public class MIPSEmulatorUI extends JFrame {
         filaPC.add(lblPrograma);
         filaPC.add(new JLabel("instr."));
 
-        JPanel filaEtapas = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel filaEtapas = nuevoPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         filaEtapas.add(new JLabel("Etapas:"));
         for (int i = 0; i < labelsEtapa.length; i++) {
             JLabel etapa = new JLabel(UnidadControl.ETAPAS[i], SwingConstants.CENTER);
@@ -298,12 +346,12 @@ public class MIPSEmulatorUI extends JFrame {
         lblBadgeFin.setPreferredSize(new Dimension(74, 22));
         lblBadgeFin.setFont(mono);
         lblBadgeFin.setBackground(COLOR_FIN);
-        lblBadgeFin.setForeground(Color.WHITE);
+        lblBadgeFin.setForeground(COLOR_FIN_TEXTO);
         lblBadgeFin.setVisible(false);
         filaEtapas.add(lblBadgeFin);
 
         lblUltimaEtapa.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        lblUltimaEtapa.setForeground(Color.GRAY);
+        lblUltimaEtapa.setForeground(COLOR_TEXTO_SEC);
         filaEtapas.add(lblUltimaEtapa);
 
         filaEtapas.add(Box.createHorizontalStrut(16));
@@ -311,7 +359,7 @@ public class MIPSEmulatorUI extends JFrame {
         filaEtapas.add(new JLabel("ALU:"));
         filaEtapas.add(lblALUResumen);
 
-        JPanel filaMensaje = new JPanel(new BorderLayout());
+        JPanel filaMensaje = nuevoPanel(new BorderLayout());
         lblMensaje.setFont(new Font("Monospaced", Font.PLAIN, 12));
         filaMensaje.add(lblMensaje, BorderLayout.CENTER);
 
@@ -323,8 +371,52 @@ public class MIPSEmulatorUI extends JFrame {
         return panel;
     }
 
+    // ------------------------------------------------------------------
+    // Estilos de la paleta "Miel, Latte & Lavanda"
+    // ------------------------------------------------------------------
+    private static JPanel nuevoPanel(LayoutManager diseño) {
+        JPanel panel = new JPanel(diseño);
+        panel.setBackground(COLOR_FONDO);
+        return panel;
+    }
+
+    private static JPanel nuevoPanel() {
+        return nuevoPanel(new FlowLayout());
+    }
+
+    private static TitledBorder bordeTitulo(String texto) {
+        TitledBorder borde = BorderFactory.createTitledBorder(texto);
+        borde.setTitleColor(COLOR_TITULO);
+        return borde;
+    }
+
+    private static void estilizarBoton(JButton boton) {
+        boton.setBackground(COLOR_BOTON);
+        boton.setForeground(COLOR_BOTON_TEXTO);
+        boton.setOpaque(true);
+        boton.setBorder(BorderFactory.createLineBorder(COLOR_BOTON_BORDE));
+        boton.setFocusPainted(false);
+    }
+
+    private static void estilizarTabla(JTable tabla) {
+        tabla.setBackground(COLOR_PANEL);
+        tabla.setForeground(COLOR_TEXTO);
+        tabla.setGridColor(COLOR_BORDE);
+        tabla.setSelectionBackground(COLOR_BOTON);
+        tabla.setSelectionForeground(COLOR_BOTON_TEXTO);
+        tabla.getTableHeader().setBackground(COLOR_BOTON);
+        tabla.getTableHeader().setForeground(COLOR_BOTON_TEXTO);
+    }
+
+    private static JScrollPane estilizarScroll(JScrollPane scroll) {
+        scroll.setBackground(COLOR_FONDO);
+        scroll.getViewport().setBackground(COLOR_PANEL);
+        return scroll;
+    }
+
     private static JTable tablaCon(DefaultTableModel modelo) {
         JTable tabla = new JTable(modelo);
+        estilizarTabla(tabla);
         tabla.setRowHeight(20);
         tabla.setFont(new Font("Monospaced", Font.PLAIN, 11));
         return tabla;
@@ -444,12 +536,13 @@ public class MIPSEmulatorUI extends JFrame {
         for (int i = 0; i < labelsEtapa.length; i++) {
             boolean activa = !terminado && (etapa >= 1 && etapa <= labelsEtapa.length && i == etapa - 1);
             labelsEtapa[i].setBackground(activa ? COLOR_ACTIVO : COLOR_INACTIVO);
-            labelsEtapa[i].setForeground(activa ? Color.WHITE : Color.DARK_GRAY);
+            labelsEtapa[i].setForeground(activa ? COLOR_ACTIVO_TEXTO : COLOR_INACTIVO_TEXTO);
         }
         if (terminado) {
             boolean esError = "ERROR".equals(estado);
             lblBadgeFin.setText(esError ? "ERROR" : "FIN");
             lblBadgeFin.setBackground(esError ? COLOR_ERROR : COLOR_FIN);
+            lblBadgeFin.setForeground(esError ? COLOR_ERROR_TEXTO : COLOR_FIN_TEXTO);
             lblBadgeFin.setVisible(true);
             lblUltimaEtapa.setText("Última etapa procesada: "
                     + cpu.getUnidadControl().getEtapaNombre() + " (" + etapa + ")");
@@ -564,15 +657,15 @@ public class MIPSEmulatorUI extends JFrame {
     private static Color colorEstado(String estado) {
         switch (estado) {
             case "ERROR":
-                return new Color(0xC62828);
+                return COLOR_ERROR_TEXTO;
             case "FINALIZADO":
-                return new Color(0x2E7D32);
+                return COLOR_FIN_TEXTO;
             case "EJECUTANDO":
-                return new Color(0x1E88E5);
+                return COLOR_ACTIVO_TEXTO;
             case "LISTO":
-                return new Color(0x1565C0);
+                return COLOR_LISTO_TEXTO;
             default:
-                return Color.GRAY;
+                return COLOR_TEXTO_SEC;
         }
     }
 
@@ -596,9 +689,9 @@ public class MIPSEmulatorUI extends JFrame {
             if (regsModificados.contains(fila)) {
                 c.setBackground(COLOR_REG_MOD);
             } else if (fila == 0) {
-                c.setBackground(new Color(0xF0F0F0));
+                c.setBackground(COLOR_FILA_CERO);
             } else {
-                c.setBackground(Color.WHITE);
+                c.setBackground(COLOR_PANEL);
             }
             return c;
         }
@@ -616,7 +709,7 @@ public class MIPSEmulatorUI extends JFrame {
             } else if (indice == celdaConsultada) {
                 c.setBackground(COLOR_RAM_CONSULTA);
             } else {
-                c.setBackground(Color.WHITE);
+                c.setBackground(COLOR_PANEL);
             }
             c.setToolTipText("Palabra " + indice + "  ->  " + direccionRAM(indice));
             return c;
