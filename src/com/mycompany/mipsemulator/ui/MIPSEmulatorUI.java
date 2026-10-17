@@ -58,34 +58,34 @@ public class MIPSEmulatorUI extends JFrame {
     // con luz ambiental / proyector: fondos pastel + texto oscuro).
     // --------------------------------------------------------------
     // Base
-    private static final Color COLOR_FONDO = new Color(0xFBF7F0);      // fondo general cálido
-    private static final Color COLOR_PANEL = new Color(0xFFFFFF);      // tablas y áreas de texto
-    private static final Color COLOR_BORDE = new Color(0xE8DFD3);      // bordes y rejas latte
+    private static final Color COLOR_FONDO = new Color(0xF0E2CF);      // fondo general latte (no blanco)
+    private static final Color COLOR_PANEL = new Color(0xFBF2E4);      // tablas y áreas de texto (crema)
+    private static final Color COLOR_BORDE = new Color(0xC9AE93);      // bordes y rejas latte
     private static final Color COLOR_TEXTO = new Color(0x3A2E27);      // texto principal (café)
-    private static final Color COLOR_TEXTO_SEC = new Color(0x7A6A5F);  // texto secundario
-    private static final Color COLOR_TITULO = new Color(0x5C4A3F);     // títulos de panel
+    private static final Color COLOR_TEXTO_SEC = new Color(0x6E5A4B);  // texto secundario
+    private static final Color COLOR_TITULO = new Color(0x4E3A2C);     // títulos de panel
 
     // Etapas y badges de estado
-    private static final Color COLOR_ACTIVO = new Color(0xD8CCF7);        // etapa activa (lavanda)
-    private static final Color COLOR_ACTIVO_TEXTO = new Color(0x4A3173);  // texto lavanda oscuro
-    private static final Color COLOR_INACTIVO = new Color(0xF1EBE2);      // etapa inactiva (beige)
-    private static final Color COLOR_INACTIVO_TEXTO = new Color(0x8A7C6E);
-    private static final Color COLOR_FIN = new Color(0xCDEFD6);           // badge FIN (menta)
-    private static final Color COLOR_FIN_TEXTO = new Color(0x1E6B34);
-    private static final Color COLOR_ERROR = new Color(0xFFC9D6);         // badge ERROR (rosa)
-    private static final Color COLOR_ERROR_TEXTO = new Color(0xA32C4A);
-    private static final Color COLOR_LISTO_TEXTO = new Color(0x6B5400);   // estado LISTO (miel)
+    private static final Color COLOR_ACTIVO = new Color(0xC3A6F0);        // etapa activa (lavanda)
+    private static final Color COLOR_ACTIVO_TEXTO = new Color(0x3B2166);  // texto lavanda oscuro
+    private static final Color COLOR_INACTIVO = new Color(0xE7D9C6);      // etapa inactiva (beige)
+    private static final Color COLOR_INACTIVO_TEXTO = new Color(0x7A6653);
+    private static final Color COLOR_FIN = new Color(0xA8E6B8);           // badge FIN (menta)
+    private static final Color COLOR_FIN_TEXTO = new Color(0x14532D);
+    private static final Color COLOR_ERROR = new Color(0xFFB0C8);         // badge ERROR (rosa)
+    private static final Color COLOR_ERROR_TEXTO = new Color(0x8C1C3A);
+    private static final Color COLOR_LISTO_TEXTO = new Color(0x8A6300);   // estado LISTO (miel)
 
     // Resaltados de datos
-    private static final Color COLOR_REG_MOD = new Color(0xFFF3B0);       // registro modificado (amarillo)
-    private static final Color COLOR_RAM_MOD = new Color(0xF5DCC0);       // RAM modificada (durazno)
-    private static final Color COLOR_RAM_CONSULTA = new Color(0xDCCCFA);  // RAM consultada (lavanda)
-    private static final Color COLOR_FILA_CERO = new Color(0xF3EEE6);     // fila de $zero
+    private static final Color COLOR_REG_MOD = new Color(0xFFE066);       // registro modificado (amarillo)
+    private static final Color COLOR_RAM_MOD = new Color(0xFFD1A1);       // RAM modificada (durazno)
+    private static final Color COLOR_RAM_CONSULTA = new Color(0xCFB8F5);  // RAM consultada (lavanda)
+    private static final Color COLOR_FILA_CERO = new Color(0xEFE2CF);     // fila de $zero
 
     // Controles
-    private static final Color COLOR_BOTON = new Color(0xE4DAFB);         // botones (lavanda)
-    private static final Color COLOR_BOTON_TEXTO = new Color(0x3D2B63);
-    private static final Color COLOR_BOTON_BORDE = new Color(0xB39DDB);
+    private static final Color COLOR_BOTON = new Color(0xCDB6F5);         // botones (lavanda)
+    private static final Color COLOR_BOTON_TEXTO = new Color(0x38215E);
+    private static final Color COLOR_BOTON_BORDE = new Color(0x8E6FC7);
 
     private final transient CPU cpu = new CPU();
 
@@ -335,6 +335,7 @@ public class MIPSEmulatorUI extends JFrame {
             JLabel etapa = new JLabel(UnidadControl.ETAPAS[i], SwingConstants.CENTER);
             etapa.setOpaque(true);
             etapa.setBackground(COLOR_INACTIVO);
+            etapa.setBorder(BorderFactory.createLineBorder(COLOR_BORDE));
             etapa.setPreferredSize(new Dimension(46, 22));
             etapa.setFont(mono);
             labelsEtapa[i] = etapa;
@@ -347,6 +348,7 @@ public class MIPSEmulatorUI extends JFrame {
         lblBadgeFin.setFont(mono);
         lblBadgeFin.setBackground(COLOR_FIN);
         lblBadgeFin.setForeground(COLOR_FIN_TEXTO);
+        lblBadgeFin.setBorder(BorderFactory.createLineBorder(COLOR_FIN_TEXTO));
         lblBadgeFin.setVisible(false);
         filaEtapas.add(lblBadgeFin);
 
@@ -393,6 +395,7 @@ public class MIPSEmulatorUI extends JFrame {
     private static void estilizarBoton(JButton boton) {
         boton.setBackground(COLOR_BOTON);
         boton.setForeground(COLOR_BOTON_TEXTO);
+        boton.setFont(boton.getFont().deriveFont(Font.BOLD));
         boton.setOpaque(true);
         boton.setBorder(BorderFactory.createLineBorder(COLOR_BOTON_BORDE));
         boton.setFocusPainted(false);
@@ -537,12 +540,14 @@ public class MIPSEmulatorUI extends JFrame {
             boolean activa = !terminado && (etapa >= 1 && etapa <= labelsEtapa.length && i == etapa - 1);
             labelsEtapa[i].setBackground(activa ? COLOR_ACTIVO : COLOR_INACTIVO);
             labelsEtapa[i].setForeground(activa ? COLOR_ACTIVO_TEXTO : COLOR_INACTIVO_TEXTO);
+            labelsEtapa[i].setBorder(BorderFactory.createLineBorder(activa ? COLOR_ACTIVO_TEXTO : COLOR_BORDE));
         }
         if (terminado) {
             boolean esError = "ERROR".equals(estado);
             lblBadgeFin.setText(esError ? "ERROR" : "FIN");
             lblBadgeFin.setBackground(esError ? COLOR_ERROR : COLOR_FIN);
             lblBadgeFin.setForeground(esError ? COLOR_ERROR_TEXTO : COLOR_FIN_TEXTO);
+            lblBadgeFin.setBorder(BorderFactory.createLineBorder(esError ? COLOR_ERROR_TEXTO : COLOR_FIN_TEXTO));
             lblBadgeFin.setVisible(true);
             lblUltimaEtapa.setText("Última etapa procesada: "
                     + cpu.getUnidadControl().getEtapaNombre() + " (" + etapa + ")");

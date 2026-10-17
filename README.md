@@ -232,15 +232,16 @@ proyector):
 
 | Color | Significado |
 |-------|-------------|
-| Lavanda (`#D8CCF7`) | Etapa activa durante la ejecución. |
-| Beige (`#F1EBE2`) | Etapa inactiva. |
-| Menta (`#CDEFD6`) | Badge **FIN** (estado `FINALIZADO`). |
-| Rosa (`#FFC9D6`) | Badge **ERROR** (estado `ERROR`). |
-| Amarillo pastel (`#FFF3B0`) | Registro modificado. |
-| Durazno/latte (`#F5DCC0`) | Celda de RAM modificada en la última acción. |
-| Lavanda claro (`#DCCCFA`) | Última celda de RAM consultada/modificada. |
-| Off-white cálido (`#FBF7F0`) | Fondo general de la ventana. |
-| Lavanda (`#E4DAFB`) | Botones y encabezados de tabla. |
+| Lavanda (`#C3A6F0`) | Etapa activa durante la ejecución. |
+| Beige (`#E7D9C6`) | Etapa inactiva. |
+| Menta (`#A8E6B8`) | Badge **FIN** (estado `FINALIZADO`). |
+| Rosa (`#FFB0C8`) | Badge **ERROR** (estado `ERROR`). |
+| Amarillo (`#FFE066`) | Registro modificado. |
+| Durazno (`#FFD1A1`) | Celda de RAM modificada en la última acción. |
+| Lavanda (`#CFB8F5`) | Última celda de RAM consultada/modificada. |
+| Latte (`#F0E2CF`) | Fondo general de la ventana. |
+| Crema (`#FBF2E4`) | Tablas y áreas de texto. |
+| Lavanda (`#CDB6F5`) | Botones y encabezados de tabla. |
 
 **Indicador de etapas:** durante la ejecución se resalta la etapa real. Al
 terminar, las cinco etapas se apagan, aparece un badge **FIN** (menta) o
