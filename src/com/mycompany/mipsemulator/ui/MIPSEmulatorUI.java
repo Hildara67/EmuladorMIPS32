@@ -35,8 +35,15 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import java.awt.LayoutManager;
+import java.awt.RenderingHints;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
@@ -46,6 +53,11 @@ import java.util.Set;
  * Solo muestra el estado y solicita acciones a {@link CPU}; no decodifica ni
  * ejecuta instrucciones por sí misma. La memoria de registros y la RAM
  * permanecen visibles de forma simultánea; el resto va en pestañas secundarias.
+ *
+ * <p>Apariencia: tema <b>"Vintage Paper"</b> — paleta terrosa (plum, terracota,
+ * mostaza, sage y café), tipografía serif en los títulos y monoespaciada en los
+ * datos. Los fondos claros con texto oscuro mantienen la legibilidad incluso con
+ * luz ambiental o proyector.</p>
  */
 public class MIPSEmulatorUI extends JFrame {
 
@@ -54,47 +66,75 @@ public class MIPSEmulatorUI extends JFrame {
     private static final int ALTO_FILA_RAM = 20;
 
     // --------------------------------------------------------------
-    // Paleta "Miel, Latte & Lavanda" (diseñada para verse bien incluso
-    // con luz ambiental / proyector: fondos pastel + texto oscuro).
+    // Tema "Vintage Paper": papel, tinta y marcos
     // --------------------------------------------------------------
-    // Base
-    private static final Color COLOR_FONDO = new Color(0xEAD8C0);      // fondo general latte (no blanco)
-    private static final Color COLOR_PANEL = new Color(0xFDF6EA);      // tablas y áreas de texto (crema)
-    private static final Color COLOR_BORDE = new Color(0xC4A484);      // bordes y rejas latte
-    private static final Color COLOR_TEXTO = new Color(0x3A2E27);      // texto principal (café)
-    private static final Color COLOR_TEXTO_SEC = new Color(0x6E5A4B);  // texto secundario
-    private static final Color COLOR_TITULO = new Color(0x4E3A2C);     // títulos de panel
+    private static final Color COLOR_FONDO_ARRIBA = new Color(0xF7EFE0);  // papel (arriba)
+    private static final Color COLOR_FONDO_ABAJO = new Color(0xE3D2B8);   // papel (abajo)
+    private static final Color COLOR_PANEL = new Color(0xFBF5E9);         // tarjetas (crema)
+    private static final Color COLOR_PANEL_ALT = new Color(0xF3E8D5);     // filas alternas (zebra)
+    private static final Color COLOR_BORDE = new Color(0xBFA37E);         // marcos
+    private static final Color COLOR_REJA = new Color(0xDCCCB4);          // rejas de tabla
+    private static final Color COLOR_TEXTO = new Color(0x3B3028);         // tinta principal
+    private static final Color COLOR_TEXTO_SEC = new Color(0x6B5B4A);     // tinta secundaria
 
-    // Fondos por sección: cada zona con su propio color, para que no se vea plano
-    private static final Color COLOR_SECCION_BARRA = new Color(0xE3D2F5);      // barra superior (lavanda)
-    private static final Color COLOR_SECCION_REGISTROS = new Color(0xD8ECFA);  // registros (celeste)
-    private static final Color COLOR_SECCION_RAM = new Color(0xFBE3C8);        // RAM (durazno)
-    private static final Color COLOR_SECCION_PESTANIAS = new Color(0xDCF3E4);  // pestañas (menta)
-    private static final Color COLOR_SECCION_INFERIOR = new Color(0xEFDFC8);   // barra inferior (beige)
+    // Acentos vintage
+    private static final Color COLOR_PLUM = new Color(0x5C4A6E);          // ciruela
+    private static final Color COLOR_PLUM_OSCURO = new Color(0x4A3B5C);
+    private static final Color COLOR_TERRACOTA = new Color(0xB85C38);
+    private static final Color COLOR_TERRACOTA_OSCURO = new Color(0x9A4A2C);
+    private static final Color COLOR_MOSTAZA = new Color(0xD9A441);
+    private static final Color COLOR_MOSTAZA_OSCURO = new Color(0xA97F2C);
+    private static final Color COLOR_SAGE = new Color(0x6E8B63);
+    private static final Color COLOR_SAGE_OSCURO = new Color(0x556E4C);
+    private static final Color COLOR_CAFE = new Color(0x7A6248);
+    private static final Color COLOR_CAFE_OSCURO = new Color(0x5E4A34);
+    private static final Color COLOR_CREMA_TEXTO = new Color(0xF8F1E2);   // texto sobre acento oscuro
+    private static final Color COLOR_TINTA_OSCURA = new Color(0x3A2B12);  // texto sobre mostaza
+
+    // Títulos de sección (un acento por tarjeta)
+    private static final Color COLOR_TITULO_REGISTROS = new Color(0x5C4A6E);
+    private static final Color COLOR_TITULO_RAM = new Color(0xA9542F);
+    private static final Color COLOR_TITULO_PESTANIAS = new Color(0x556E4C);
+    private static final Color COLOR_TITULO_INFERIOR = new Color(0x8A6A2F);
 
     // Etapas y badges de estado
-    private static final Color COLOR_ACTIVO = new Color(0xB79BF0);        // etapa activa (lavanda)
-    private static final Color COLOR_ACTIVO_TEXTO = new Color(0x2E1A5E);  // texto lavanda oscuro
-    private static final Color COLOR_INACTIVO = new Color(0xD9CBB6);      // etapa inactiva (beige)
-    private static final Color COLOR_INACTIVO_TEXTO = new Color(0x6E5A48);
-    private static final Color COLOR_FIN = new Color(0x8CE0A4);           // badge FIN (menta)
-    private static final Color COLOR_FIN_TEXTO = new Color(0x0F4A24);
-    private static final Color COLOR_ERROR = new Color(0xFF9DB8);         // badge ERROR (rosa)
-    private static final Color COLOR_ERROR_TEXTO = new Color(0x7D1233);
-    private static final Color COLOR_LISTO_TEXTO = new Color(0x8A6300);   // estado LISTO (miel)
+    private static final Color COLOR_ACTIVO = new Color(0x6E5A8C);         // etapa activa (plum)
+    private static final Color COLOR_ACTIVO_TEXTO = new Color(0xF8F1E2);
+    private static final Color COLOR_INACTIVO = new Color(0xE4D5BE);       // etapa inactiva (papel)
+    private static final Color COLOR_INACTIVO_TEXTO = new Color(0x7A6A55);
+    private static final Color COLOR_FIN = new Color(0x6E8B63);            // badge FIN (sage)
+    private static final Color COLOR_FIN_TEXTO = new Color(0xF8F1E2);
+    private static final Color COLOR_ERROR = new Color(0xB85C38);          // badge ERROR (terracota)
+    private static final Color COLOR_ERROR_TEXTO = new Color(0xFBF1E6);
+    private static final Color COLOR_LISTO_TEXTO = new Color(0x8A6A2F);
 
-    // Resaltados de datos: un color distinto para cada tipo
-    private static final Color COLOR_REG_MOD = new Color(0xFFE066);       // registro modificado (amarillo)
-    private static final Color COLOR_RAM_MOD = new Color(0xFFC98A);       // RAM modificada (durazno)
-    private static final Color COLOR_RAM_CONSULTA = new Color(0x9FDBF5);  // RAM consultada (celeste)
-    private static final Color COLOR_FILA_CERO = new Color(0xEADFD0);     // fila de $zero
+    // Resaltados de datos (un tono distinto por tipo)
+    private static final Color COLOR_REG_MOD = new Color(0xF2D08A);        // registro modificado (mostaza)
+    private static final Color COLOR_RAM_MOD = new Color(0xE8B08A);        // RAM modificada (terracota suave)
+    private static final Color COLOR_RAM_CONSULTA = new Color(0xA9C7D9);   // RAM consultada (azul empolvado)
+    private static final Color COLOR_FILA_CERO = new Color(0xEDE2CF);      // fila de $zero
 
-    // Controles
-    private static final Color COLOR_BOTON = new Color(0xCDB6F5);               // botones (lavanda)
-    private static final Color COLOR_BOTON_TEXTO = new Color(0x38215E);
-    private static final Color COLOR_BOTON_BORDE = new Color(0x8E6FC7);
-    private static final Color COLOR_ENCABEZADO = new Color(0xD8BE9E);          // encabezados de tabla (café latte)
-    private static final Color COLOR_ENCABEZADO_TEXTO = new Color(0x3E2C1E);
+    // Encabezados de tabla
+    private static final Color COLOR_ENCABEZADO = new Color(0x6B5B4A);
+    private static final Color COLOR_ENCABEZADO_TEXTO = new Color(0xF8F1E2);
+
+    // --------------------------------------------------------------
+    // Tipografías (con respaldo si la fuente no está instalada)
+    // --------------------------------------------------------------
+    private static final Font FUENTE_TITULO = fuente(
+            new String[]{"Georgia", "Cambria", "Palatino Linotype", "Book Antiqua"}, Font.BOLD, 13);
+    private static final Font FUENTE_TITULO_GRANDE = fuente(
+            new String[]{"Georgia", "Cambria", "Palatino Linotype"}, Font.BOLD, 22);
+    private static final Font FUENTE_SUBTITULO = fuente(
+            new String[]{"Georgia", "Cambria", "Palatino Linotype"}, Font.ITALIC, 12);
+    private static final Font FUENTE_UI = fuente(
+            new String[]{"Segoe UI", "Trebuchet MS", "Verdana", "Tahoma"}, Font.PLAIN, 12);
+    private static final Font FUENTE_UI_NEGRITA = fuente(
+            new String[]{"Segoe UI", "Trebuchet MS", "Verdana", "Tahoma"}, Font.BOLD, 12);
+    private static final Font FUENTE_DATOS = fuente(
+            new String[]{"Consolas", "Cascadia Mono", "Lucida Console", "Monospaced"}, Font.PLAIN, 12);
+    private static final Font FUENTE_DATOS_NEGRITA = fuente(
+            new String[]{"Consolas", "Cascadia Mono", "Lucida Console", "Monospaced"}, Font.BOLD, 12);
 
     private final transient CPU cpu = new CPU();
 
@@ -145,8 +185,11 @@ public class MIPSEmulatorUI extends JFrame {
         setSize(1400, 860);
         setMinimumSize(new Dimension(1100, 700));
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout(8, 8));
-        getContentPane().setBackground(COLOR_FONDO);
+
+        PanelDegradado fondo = new PanelDegradado(COLOR_FONDO_ARRIBA, COLOR_FONDO_ABAJO);
+        fondo.setLayout(new BorderLayout(8, 8));
+        fondo.setBorder(BorderFactory.createEmptyBorder(8, 10, 10, 10));
+        setContentPane(fondo);
 
         modeloRegistros = modeloNoEditable("Nombre", "Índice", "Hexadecimal", "Decimal");
         modeloInstrucciones = modeloNoEditable("Índice", "Dirección", "Binario (32 bits)", "Mnemónico");
@@ -154,7 +197,7 @@ public class MIPSEmulatorUI extends JFrame {
         modeloDisco = modeloNoEditable("Índice", "Dirección", "Hexadecimal", "Decimal");
         modeloRAM = new RAMTableModel();
 
-        add(crearPanelSuperior(), BorderLayout.NORTH);
+        add(crearBanner(), BorderLayout.NORTH);
         add(crearPanelCentral(), BorderLayout.CENTER);
         add(crearPanelInferior(), BorderLayout.SOUTH);
 
@@ -167,40 +210,31 @@ public class MIPSEmulatorUI extends JFrame {
     // ------------------------------------------------------------------
     // Construcción de la interfaz
     // ------------------------------------------------------------------
-    private JPanel crearPanelSuperior() {
-        JPanel panel = nuevoPanel(new BorderLayout(8, 6), COLOR_SECCION_BARRA);
-        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 0, 8));
+    private JPanel crearBanner() {
+        JPanel banner = new JPanel(new BorderLayout(12, 0));
+        banner.setBackground(COLOR_PLUM);
+        banner.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 3, 0, COLOR_MOSTAZA),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)));
 
-        estilizarBoton(btnCargar);
-        estilizarBoton(btnEjecutar);
-        estilizarBoton(btnEtapa);
-        estilizarBoton(btnTodo);
-        estilizarBoton(btnReiniciar);
+        JLabel titulo = new JLabel("Emulador MIPS32");
+        titulo.setFont(FUENTE_TITULO_GRANDE);
+        titulo.setForeground(COLOR_CREMA_TEXTO);
 
-        JPanel fila1 = nuevoPanel(new FlowLayout(FlowLayout.LEFT, 10, 4), COLOR_SECCION_BARRA);
-        fila1.add(btnCargar);
-        fila1.add(new JLabel("Archivo:"));
-        fila1.add(lblArchivo);
-        fila1.add(Box.createHorizontalStrut(24));
-        fila1.add(new JLabel("Estado:"));
-        lblEstado.setFont(new Font("Monospaced", Font.BOLD, 13));
-        fila1.add(lblEstado);
+        JLabel subtitulo = new JLabel("Emulador monociclo  ·  ciclo IF → ID → EX → MEM → WB");
+        subtitulo.setFont(FUENTE_SUBTITULO);
+        subtitulo.setForeground(new Color(0xD8C9B0));
 
-        JPanel fila2 = nuevoPanel(new FlowLayout(FlowLayout.LEFT, 6, 0), COLOR_SECCION_BARRA);
-        fila2.add(btnEjecutar);
-        fila2.add(btnEtapa);
-        fila2.add(btnTodo);
-        fila2.add(btnReiniciar);
+        JPanel textos = new JPanel();
+        textos.setOpaque(false);
+        textos.setLayout(new BoxLayout(textos, BoxLayout.Y_AXIS));
+        titulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        textos.add(titulo);
+        textos.add(subtitulo);
 
-        JPanel filas = nuevoPanel(new FlowLayout(), COLOR_SECCION_BARRA);
-        filas.setLayout(new BoxLayout(filas, BoxLayout.Y_AXIS));
-        fila1.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fila2.setAlignmentX(Component.LEFT_ALIGNMENT);
-        filas.add(fila1);
-        filas.add(fila2);
-
-        panel.add(filas, BorderLayout.CENTER);
-        return panel;
+        banner.add(textos, BorderLayout.WEST);
+        return banner;
     }
 
     private JPanel crearPanelCentral() {
@@ -209,39 +243,70 @@ public class MIPSEmulatorUI extends JFrame {
         derecha.setResizeWeight(0.45);
         derecha.setContinuousLayout(true);
         derecha.setDividerLocation(300);
-        derecha.setBackground(COLOR_FONDO);
+        derecha.setBackground(COLOR_PANEL_ALT);
 
         JSplitPane principal = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
                 crearPanelRegistros(), derecha);
         principal.setResizeWeight(0.0);
         principal.setContinuousLayout(true);
         principal.setDividerLocation(430);
-        principal.setBackground(COLOR_FONDO);
+        principal.setBackground(COLOR_PANEL_ALT);
 
-        JPanel panel = nuevoPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        JPanel panel = panelTransparente(new BorderLayout());
+        panel.add(crearPanelSuperior(), BorderLayout.NORTH);
         panel.add(principal, BorderLayout.CENTER);
         return panel;
     }
 
+    private JPanel crearPanelSuperior() {
+        JPanel panel = panelTransparente(new BorderLayout(8, 6));
+
+        estilizarBoton(btnCargar, COLOR_SAGE, COLOR_CREMA_TEXTO, COLOR_SAGE_OSCURO);
+        estilizarBoton(btnEjecutar, COLOR_TERRACOTA, COLOR_CREMA_TEXTO, COLOR_TERRACOTA_OSCURO);
+        estilizarBoton(btnEtapa, COLOR_MOSTAZA, COLOR_TINTA_OSCURA, COLOR_MOSTAZA_OSCURO);
+        estilizarBoton(btnTodo, COLOR_PLUM, COLOR_CREMA_TEXTO, COLOR_PLUM_OSCURO);
+        estilizarBoton(btnReiniciar, COLOR_CAFE, COLOR_CREMA_TEXTO, COLOR_CAFE_OSCURO);
+
+        JPanel fila1 = panelTransparente(new FlowLayout(FlowLayout.LEFT, 10, 4));
+        fila1.add(btnCargar);
+        fila1.add(new JLabel("Archivo:"));
+        fila1.add(lblArchivo);
+        fila1.add(Box.createHorizontalStrut(24));
+        fila1.add(new JLabel("Estado:"));
+        lblEstado.setFont(FUENTE_UI_NEGRITA);
+        fila1.add(lblEstado);
+
+        JPanel fila2 = panelTransparente(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        fila2.add(btnEjecutar);
+        fila2.add(btnEtapa);
+        fila2.add(btnTodo);
+        fila2.add(btnReiniciar);
+
+        JPanel filas = panelTransparente(new BorderLayout());
+        filas.add(fila1, BorderLayout.NORTH);
+        filas.add(fila2, BorderLayout.CENTER);
+
+        panel.add(filas, BorderLayout.CENTER);
+        return panel;
+    }
+
     private JPanel crearPanelRegistros() {
-        JPanel panel = nuevoPanel(new BorderLayout(0, 4), COLOR_SECCION_REGISTROS);
-        panel.setBorder(bordeTitulo("Memoria de registros (32 registros)"));
+        JPanel panel = tarjeta(new BorderLayout(0, 4));
+        panel.setBorder(bordeTarjeta("Memoria de registros (32 registros)", COLOR_TITULO_REGISTROS));
 
         tablaRegistros.setModel(modeloRegistros);
         estilizarTabla(tablaRegistros);
         tablaRegistros.setRowHeight(ALTO_FILA_REGISTRO);
-        tablaRegistros.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        tablaRegistros.setFont(FUENTE_DATOS);
         tablaRegistros.setDefaultRenderer(Object.class, new RegistroRenderer());
         JScrollPane scroll = estilizarScroll(new JScrollPane(tablaRegistros));
         scroll.getVerticalScrollBar().setUnitIncrement(ALTO_FILA_REGISTRO);
         panel.add(scroll, BorderLayout.CENTER);
 
-        JPanel especiales = nuevoPanel(new FlowLayout(FlowLayout.LEFT, 12, 4), COLOR_SECCION_REGISTROS);
-        especiales.setBorder(bordeTitulo("Registros especiales"));
-        Font mono = new Font("Monospaced", Font.BOLD, 13);
-        lblHI.setFont(mono);
-        lblLO.setFont(mono);
+        JPanel especiales = tarjeta(new FlowLayout(FlowLayout.LEFT, 12, 4));
+        especiales.setBorder(bordeTarjeta("Registros especiales", COLOR_TITULO_REGISTROS));
+        lblHI.setFont(FUENTE_DATOS_NEGRITA);
+        lblLO.setFont(FUENTE_DATOS_NEGRITA);
         especiales.add(new JLabel("HI:"));
         especiales.add(lblHI);
         especiales.add(Box.createHorizontalStrut(16));
@@ -253,14 +318,13 @@ public class MIPSEmulatorUI extends JFrame {
     }
 
     private JPanel crearPanelRAM() {
-        JPanel panel = nuevoPanel(new BorderLayout(0, 4), COLOR_SECCION_RAM);
-        panel.setBorder(bordeTitulo(
-                "RAM")); // (100 palabras de 32 bits; direcciones 0x00000000 - 0x0000018C)
+        JPanel panel = tarjeta(new BorderLayout(0, 4));
+        panel.setBorder(bordeTarjeta("RAM", COLOR_TITULO_RAM));
 
         tablaRAM.setModel(modeloRAM);
         estilizarTabla(tablaRAM);
         tablaRAM.setRowHeight(ALTO_FILA_RAM);
-        tablaRAM.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        tablaRAM.setFont(FUENTE_DATOS);
         tablaRAM.setDefaultRenderer(Object.class, new RAMRenderer());
         tablaRAM.setRowSelectionAllowed(false);
         tablaRAM.setFillsViewportHeight(false);
@@ -272,9 +336,10 @@ public class MIPSEmulatorUI extends JFrame {
         scroll.getVerticalScrollBar().setUnitIncrement(ALTO_FILA_RAM);
         panel.add(scroll, BorderLayout.CENTER);
 
-        JLabel leyenda = new JLabel("Durazno = última celda modificada.  "
-                + "Celeste = última celda consultada.");
-        leyenda.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        JLabel leyenda = new JLabel("Mostaza = registro modificado.  "
+                + "Terracota = celda de RAM modificada.  "
+                + "Azul = última celda consultada.");
+        leyenda.setFont(FUENTE_UI);
         leyenda.setForeground(COLOR_TEXTO_SEC);
         panel.add(leyenda, BorderLayout.SOUTH);
 
@@ -283,46 +348,48 @@ public class MIPSEmulatorUI extends JFrame {
 
     private JPanel crearPanelPestanias() {
         JTabbedPane tabs = new JTabbedPane();
-        tabs.setBackground(COLOR_SECCION_PESTANIAS);
+        tabs.setBackground(COLOR_PANEL);
         tabs.setForeground(COLOR_TEXTO);
+        tabs.setFont(FUENTE_UI_NEGRITA);
 
         tabs.addTab("Memoria de instrucciones", estilizarScroll(new JScrollPane(tablaCon(modeloInstrucciones))));
         tabs.addTab("ROM", estilizarScroll(new JScrollPane(tablaCon(modeloROM))));
         tabs.addTab("Disco duro", estilizarScroll(new JScrollPane(tablaCon(modeloDisco))));
 
         areaALU.setEditable(false);
-        areaALU.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        areaALU.setFont(FUENTE_DATOS);
         areaALU.setBackground(COLOR_PANEL);
         areaALU.setForeground(COLOR_TEXTO);
         areaALU.setCaretColor(COLOR_TEXTO);
         tabs.addTab("ALU / HI-LO", estilizarScroll(new JScrollPane(areaALU)));
 
         areaLog.setEditable(false);
-        areaLog.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        areaLog.setFont(FUENTE_DATOS);
         areaLog.setBackground(COLOR_PANEL);
         areaLog.setForeground(COLOR_TEXTO);
         areaLog.setCaretColor(COLOR_TEXTO);
         tabs.addTab("Log de etapas", estilizarScroll(new JScrollPane(areaLog)));
 
-        JPanel panel = nuevoPanel(new BorderLayout(), COLOR_SECCION_PESTANIAS);
-        panel.setBorder(bordeTitulo("Vistas secundarias"));
+        JPanel panel = tarjeta(new BorderLayout());
+        panel.setBorder(bordeTarjeta("Vistas secundarias", COLOR_TITULO_PESTANIAS));
         panel.add(tabs, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel crearPanelInferior() {
-        JPanel panel = nuevoPanel(new BorderLayout(6, 4), COLOR_SECCION_INFERIOR);
-        panel.setBorder(BorderFactory.createEmptyBorder(0, 8, 8, 8));
+        JPanel panel = tarjeta(new BorderLayout(6, 4));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(3, 0, 0, 0, COLOR_BORDE),
+                BorderFactory.createEmptyBorder(8, 12, 6, 12)));
 
-        JPanel info = nuevoPanel(new GridLayout(3, 1, 4, 2), COLOR_SECCION_INFERIOR);
+        JPanel info = panelTransparente(new GridLayout(3, 1, 4, 2));
 
-        JPanel filaPC = nuevoPanel(new FlowLayout(FlowLayout.LEFT, 10, 0), COLOR_SECCION_INFERIOR);
-        Font mono = new Font("Monospaced", Font.BOLD, 13);
-        lblPC.setFont(mono);
-        lblInstruccion.setFont(mono);
-        lblBinario.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        lblContador.setFont(mono);
-        lblPrograma.setFont(mono);
+        JPanel filaPC = panelTransparente(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        lblPC.setFont(FUENTE_DATOS_NEGRITA);
+        lblInstruccion.setFont(FUENTE_DATOS_NEGRITA);
+        lblBinario.setFont(FUENTE_DATOS);
+        lblContador.setFont(FUENTE_DATOS_NEGRITA);
+        lblPrograma.setFont(FUENTE_DATOS_NEGRITA);
         filaPC.add(new JLabel("PC:"));
         filaPC.add(lblPC);
         filaPC.add(Box.createHorizontalStrut(16));
@@ -338,40 +405,46 @@ public class MIPSEmulatorUI extends JFrame {
         filaPC.add(lblPrograma);
         filaPC.add(new JLabel("instr."));
 
-        JPanel filaEtapas = nuevoPanel(new FlowLayout(FlowLayout.LEFT, 6, 0), COLOR_SECCION_INFERIOR);
-        filaEtapas.add(new JLabel("Etapas:"));
+        JPanel filaEtapas = panelTransparente(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JLabel lblEtapas = new JLabel("Etapas:");
+        lblEtapas.setFont(FUENTE_UI_NEGRITA);
+        filaEtapas.add(lblEtapas);
         for (int i = 0; i < labelsEtapa.length; i++) {
             JLabel etapa = new JLabel(UnidadControl.ETAPAS[i], SwingConstants.CENTER);
             etapa.setOpaque(true);
             etapa.setBackground(COLOR_INACTIVO);
+            etapa.setForeground(COLOR_INACTIVO_TEXTO);
             etapa.setBorder(BorderFactory.createLineBorder(COLOR_BORDE));
-            etapa.setPreferredSize(new Dimension(46, 22));
-            etapa.setFont(mono);
+            etapa.setPreferredSize(new Dimension(48, 23));
+            etapa.setFont(FUENTE_UI_NEGRITA);
             labelsEtapa[i] = etapa;
             filaEtapas.add(etapa);
         }
         filaEtapas.add(Box.createHorizontalStrut(10));
         lblBadgeFin.setOpaque(true);
         lblBadgeFin.setHorizontalAlignment(SwingConstants.CENTER);
-        lblBadgeFin.setPreferredSize(new Dimension(74, 22));
-        lblBadgeFin.setFont(mono);
+        lblBadgeFin.setPreferredSize(new Dimension(76, 23));
+        lblBadgeFin.setFont(FUENTE_UI_NEGRITA);
         lblBadgeFin.setBackground(COLOR_FIN);
         lblBadgeFin.setForeground(COLOR_FIN_TEXTO);
-        lblBadgeFin.setBorder(BorderFactory.createLineBorder(COLOR_FIN_TEXTO));
+        lblBadgeFin.setBorder(BorderFactory.createLineBorder(COLOR_SAGE_OSCURO));
         lblBadgeFin.setVisible(false);
         filaEtapas.add(lblBadgeFin);
 
-        lblUltimaEtapa.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        lblUltimaEtapa.setFont(FUENTE_UI);
         lblUltimaEtapa.setForeground(COLOR_TEXTO_SEC);
         filaEtapas.add(lblUltimaEtapa);
 
         filaEtapas.add(Box.createHorizontalStrut(16));
-        lblALUResumen.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        filaEtapas.add(new JLabel("ALU:"));
+        JLabel lblALU = new JLabel("ALU:");
+        lblALU.setFont(FUENTE_UI_NEGRITA);
+        lblALUResumen.setFont(FUENTE_DATOS);
+        filaEtapas.add(lblALU);
         filaEtapas.add(lblALUResumen);
 
-        JPanel filaMensaje = nuevoPanel(new BorderLayout(), COLOR_SECCION_INFERIOR);
-        lblMensaje.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        JPanel filaMensaje = panelTransparente(new BorderLayout());
+        lblMensaje.setFont(FUENTE_UI);
+        lblMensaje.setForeground(COLOR_TEXTO);
         filaMensaje.add(lblMensaje, BorderLayout.CENTER);
 
         info.add(filaPC);
@@ -383,55 +456,77 @@ public class MIPSEmulatorUI extends JFrame {
     }
 
     // ------------------------------------------------------------------
-    // Estilos de la paleta "Miel, Latte & Lavanda"
+    // Estilos del tema "Vintage Paper"
     // ------------------------------------------------------------------
-    private static JPanel nuevoPanel(LayoutManager diseño) {
+    private static JPanel tarjeta(LayoutManager diseño) {
         JPanel panel = new JPanel(diseño);
-        panel.setBackground(COLOR_FONDO);
+        panel.setBackground(COLOR_PANEL);
         return panel;
     }
 
-    private static JPanel nuevoPanel() {
-        return nuevoPanel(new FlowLayout());
-    }
-
-    private static JPanel nuevoPanel(LayoutManager diseño, Color fondo) {
+    private static JPanel panelTransparente(LayoutManager diseño) {
         JPanel panel = new JPanel(diseño);
-        panel.setBackground(fondo);
+        panel.setOpaque(false);
         return panel;
     }
 
-    private static TitledBorder bordeTitulo(String texto) {
-        TitledBorder borde = BorderFactory.createTitledBorder(texto);
-        borde.setTitleColor(COLOR_TITULO);
+    private static TitledBorder bordeTitulo(String texto, Color color) {
+        TitledBorder borde = BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(COLOR_BORDE), texto);
+        borde.setTitleFont(FUENTE_TITULO);
+        borde.setTitleColor(color);
         return borde;
     }
 
-    private static void estilizarBoton(JButton boton) {
-        boton.setBackground(COLOR_BOTON);
-        boton.setForeground(COLOR_BOTON_TEXTO);
-        boton.setFont(boton.getFont().deriveFont(Font.BOLD));
+    /** Borde de tarjeta: marco + título de sección + relleno interior. */
+    private static javax.swing.border.Border bordeTarjeta(String texto, Color color) {
+        return BorderFactory.createCompoundBorder(
+                bordeTitulo(texto, color),
+                BorderFactory.createEmptyBorder(2, 6, 6, 6));
+    }
+
+    private static void estilizarBoton(JButton boton, Color fondo, Color texto, Color borde) {
+        boton.setBackground(fondo);
+        boton.setForeground(texto);
+        boton.setFont(FUENTE_UI_NEGRITA);
         boton.setOpaque(true);
-        boton.setBorder(BorderFactory.createLineBorder(COLOR_BOTON_BORDE));
+        boton.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(borde),
+                BorderFactory.createEmptyBorder(5, 12, 5, 12)));
         boton.setFocusPainted(false);
+        // Efecto al pasar el mouse: un tono más claro del mismo color.
+        final Color claro = aclarar(fondo, 0.12);
+        boton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (boton.isEnabled()) {
+                    boton.setBackground(claro);
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                boton.setBackground(fondo);
+            }
+        });
     }
 
     private static void estilizarTabla(JTable tabla) {
         tabla.setBackground(COLOR_PANEL);
         tabla.setForeground(COLOR_TEXTO);
-        tabla.setGridColor(COLOR_BORDE);
-        tabla.setSelectionBackground(COLOR_ENCABEZADO);
-        tabla.setSelectionForeground(COLOR_ENCABEZADO_TEXTO);
-        // Encabezados en café latte: distinto de los botones y de las celdas resaltadas.
+        tabla.setGridColor(COLOR_REJA);
+        tabla.setSelectionBackground(COLOR_MOSTAZA);
+        tabla.setSelectionForeground(COLOR_TINTA_OSCURA);
         tabla.getTableHeader().setBackground(COLOR_ENCABEZADO);
         tabla.getTableHeader().setForeground(COLOR_ENCABEZADO_TEXTO);
-        tabla.getTableHeader().setFont(tabla.getFont().deriveFont(Font.BOLD));
+        tabla.getTableHeader().setFont(FUENTE_UI_NEGRITA);
         tabla.getTableHeader().setOpaque(true);
     }
 
     private static JScrollPane estilizarScroll(JScrollPane scroll) {
-        scroll.setBackground(COLOR_FONDO);
+        scroll.setBackground(COLOR_PANEL);
         scroll.getViewport().setBackground(COLOR_PANEL);
+        scroll.setBorder(BorderFactory.createLineBorder(COLOR_BORDE));
         return scroll;
     }
 
@@ -439,8 +534,75 @@ public class MIPSEmulatorUI extends JFrame {
         JTable tabla = new JTable(modelo);
         estilizarTabla(tabla);
         tabla.setRowHeight(20);
-        tabla.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        tabla.setFont(FUENTE_DATOS);
+        tabla.setDefaultRenderer(Object.class, new FilaZebra());
         return tabla;
+    }
+
+    /** Primer nombre de fuente disponible de la lista; si no hay, usa la última. */
+    private static Font fuente(String[] candidatas, int estilo, int tamano) {
+        try {
+            Set<String> disponibles = new HashSet<>();
+            for (String nombre : GraphicsEnvironment.getLocalGraphicsEnvironment()
+                    .getAvailableFontFamilyNames()) {
+                disponibles.add(nombre);
+            }
+            for (String candidata : candidatas) {
+                if (disponibles.contains(candidata)) {
+                    return new Font(candidata, estilo, tamano);
+                }
+            }
+        } catch (Exception ex) {
+            // Sin entorno gráfico: se usa la fuente lógica de respaldo.
+        }
+        return new Font(candidatas[candidatas.length - 1], estilo, tamano);
+    }
+
+    /** Aclara un color acercándolo al blanco (factor 0..1). */
+    private static Color aclarar(Color color, double factor) {
+        int r = (int) Math.round(color.getRed() + (255 - color.getRed()) * factor);
+        int g = (int) Math.round(color.getGreen() + (255 - color.getGreen()) * factor);
+        int b = (int) Math.round(color.getBlue() + (255 - color.getBlue()) * factor);
+        return new Color(r, g, b);
+    }
+
+    /** Fondo de papel con un degradado vertical suave. */
+    private static class PanelDegradado extends JPanel {
+        private final Color arriba;
+        private final Color abajo;
+
+        PanelDegradado(Color arriba, Color abajo) {
+            this.arriba = arriba;
+            this.abajo = abajo;
+            setBackground(arriba);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2.setPaint(new GradientPaint(0, 0, arriba, 0, getHeight(), abajo));
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.dispose();
+        }
+    }
+
+    /** Renderer de filas alternas (zebra) para las tablas secundarias. */
+    private static class FilaZebra extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable tabla, Object valor, boolean seleccion,
+                boolean foco, int fila, int columna) {
+            Component c = super.getTableCellRendererComponent(tabla, valor, seleccion, foco, fila, columna);
+            if (seleccion) {
+                c.setBackground(tabla.getSelectionBackground());
+                c.setForeground(tabla.getSelectionForeground());
+            } else {
+                c.setBackground(fila % 2 == 0 ? COLOR_PANEL : COLOR_PANEL_ALT);
+                c.setForeground(COLOR_TEXTO);
+            }
+            return c;
+        }
     }
 
     // ------------------------------------------------------------------
@@ -560,14 +722,15 @@ public class MIPSEmulatorUI extends JFrame {
             boolean activa = !terminado && (etapa >= 1 && etapa <= labelsEtapa.length && i == etapa - 1);
             labelsEtapa[i].setBackground(activa ? COLOR_ACTIVO : COLOR_INACTIVO);
             labelsEtapa[i].setForeground(activa ? COLOR_ACTIVO_TEXTO : COLOR_INACTIVO_TEXTO);
-            labelsEtapa[i].setBorder(BorderFactory.createLineBorder(activa ? COLOR_ACTIVO_TEXTO : COLOR_BORDE));
+            labelsEtapa[i].setBorder(BorderFactory.createLineBorder(activa ? COLOR_PLUM_OSCURO : COLOR_BORDE));
         }
         if (terminado) {
             boolean esError = "ERROR".equals(estado);
             lblBadgeFin.setText(esError ? "ERROR" : "FIN");
             lblBadgeFin.setBackground(esError ? COLOR_ERROR : COLOR_FIN);
             lblBadgeFin.setForeground(esError ? COLOR_ERROR_TEXTO : COLOR_FIN_TEXTO);
-            lblBadgeFin.setBorder(BorderFactory.createLineBorder(esError ? COLOR_ERROR_TEXTO : COLOR_FIN_TEXTO));
+            lblBadgeFin.setBorder(BorderFactory.createLineBorder(
+                    esError ? COLOR_TERRACOTA_OSCURO : COLOR_SAGE_OSCURO));
             lblBadgeFin.setVisible(true);
             lblUltimaEtapa.setText("Última etapa procesada: "
                     + cpu.getUnidadControl().getEtapaNombre() + " (" + etapa + ")");
@@ -700,13 +863,13 @@ public class MIPSEmulatorUI extends JFrame {
     private static Color colorEstado(String estado) {
         switch (estado) {
             case "ERROR":
-                return COLOR_ERROR_TEXTO;
+                return COLOR_TERRACOTA_OSCURO;
             case "FINALIZADO":
-                return COLOR_FIN_TEXTO;
+                return COLOR_SAGE_OSCURO;
             case "EJECUTANDO":
-                return COLOR_ACTIVO_TEXTO;
+                return COLOR_PLUM;
             case "LISTO":
-                return COLOR_LISTO_TEXTO;
+                return COLOR_TITULO_INFERIOR;
             default:
                 return COLOR_TEXTO_SEC;
         }
@@ -729,13 +892,19 @@ public class MIPSEmulatorUI extends JFrame {
         public Component getTableCellRendererComponent(JTable tabla, Object valor, boolean seleccion,
                 boolean foco, int fila, int columna) {
             Component c = super.getTableCellRendererComponent(tabla, valor, seleccion, foco, fila, columna);
+            if (seleccion) {
+                c.setBackground(tabla.getSelectionBackground());
+                c.setForeground(tabla.getSelectionForeground());
+                return c;
+            }
             if (regsModificados.contains(fila)) {
                 c.setBackground(COLOR_REG_MOD);
             } else if (fila == 0) {
                 c.setBackground(COLOR_FILA_CERO);
             } else {
-                c.setBackground(COLOR_PANEL);
+                c.setBackground(fila % 2 == 0 ? COLOR_PANEL : COLOR_PANEL_ALT);
             }
+            c.setForeground(COLOR_TEXTO);
             return c;
         }
     }
@@ -746,13 +915,14 @@ public class MIPSEmulatorUI extends JFrame {
                 boolean foco, int fila, int columna) {
             JLabel c = (JLabel) super.getTableCellRendererComponent(tabla, valor, seleccion, foco, fila, columna);
             c.setHorizontalAlignment(SwingConstants.LEFT);
+            c.setForeground(COLOR_TEXTO);
             int indice = fila;
             if (celdasModificadas.contains(indice)) {
                 c.setBackground(COLOR_RAM_MOD);
             } else if (indice == celdaConsultada) {
                 c.setBackground(COLOR_RAM_CONSULTA);
             } else {
-                c.setBackground(COLOR_PANEL);
+                c.setBackground(indice % 2 == 0 ? COLOR_PANEL : COLOR_PANEL_ALT);
             }
             c.setToolTipText("Palabra " + indice + "  ->  " + direccionRAM(indice));
             return c;
