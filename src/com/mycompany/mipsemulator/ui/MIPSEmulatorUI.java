@@ -363,12 +363,22 @@ public class MIPSEmulatorUI extends JFrame {
         especiales.setBorder(bordeTarjeta("Registros especiales", COLOR_TITULO_REGISTROS));
         lblHI.setFont(FUENTE_DATOS_NEGRITA);
         lblLO.setFont(FUENTE_DATOS_NEGRITA);
-        especiales.add(new JLabel("HI:"));
+        especiales.add(etiqueta("HI:"));
         especiales.add(lblHI);
         especiales.add(Box.createHorizontalStrut(16));
-        especiales.add(new JLabel("LO:"));
+        especiales.add(etiqueta("LO:"));
         especiales.add(lblLO);
-        panel.add(especiales, BorderLayout.SOUTH);
+
+        JPanel leyendaRegistros = panelTransparente(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        JLabel leyenda = new JLabel("Ámbar = registro modificado durante la ejecución.");
+        leyenda.setFont(FUENTE_UI);
+        leyenda.setForeground(COLOR_TEXTO_SEC);
+        leyendaRegistros.add(leyenda);
+
+        JPanel sur = panelTransparente(new BorderLayout(0, 4));
+        sur.add(especiales, BorderLayout.CENTER);
+        sur.add(leyendaRegistros, BorderLayout.SOUTH);
+        panel.add(sur, BorderLayout.SOUTH);
 
         return panel;
     }
@@ -392,9 +402,8 @@ public class MIPSEmulatorUI extends JFrame {
         scroll.getVerticalScrollBar().setUnitIncrement(ALTO_FILA_RAM);
         panel.add(scroll, BorderLayout.CENTER);
 
-        JLabel leyenda = new JLabel("Mostaza = registro modificado.  "
-                + "Terracota = celda de RAM modificada.  "
-                + "Azul = última celda consultada.");
+        JLabel leyenda = new JLabel("Naranja = celda de RAM modificada en la última instrucción.  "
+                + "Cian = última celda consultada (lectura).");
         leyenda.setFont(FUENTE_UI);
         leyenda.setForeground(COLOR_TEXTO_SEC);
         panel.add(leyenda, BorderLayout.SOUTH);
@@ -442,28 +451,33 @@ public class MIPSEmulatorUI extends JFrame {
 
         JPanel filaPC = panelTransparente(new FlowLayout(FlowLayout.LEFT, 10, 0));
         lblPC.setFont(FUENTE_DATOS_NEGRITA);
+        lblPC.setForeground(COLOR_TITULO_INFERIOR);
         lblInstruccion.setFont(FUENTE_DATOS_NEGRITA);
+        lblInstruccion.setForeground(COLOR_TITULO_RAM);
         lblBinario.setFont(FUENTE_DATOS);
+        lblBinario.setForeground(COLOR_TEXTO_SEC);
         lblContador.setFont(FUENTE_DATOS_NEGRITA);
+        lblContador.setForeground(COLOR_TITULO_INFERIOR);
         lblPrograma.setFont(FUENTE_DATOS_NEGRITA);
-        filaPC.add(new JLabel("PC:"));
+        lblPrograma.setForeground(COLOR_TITULO_INFERIOR);
+        filaPC.add(etiqueta("PC:"));
         filaPC.add(lblPC);
         filaPC.add(Box.createHorizontalStrut(16));
-        filaPC.add(new JLabel("Instrucción actual:"));
+        filaPC.add(etiqueta("Instrucción actual:"));
         filaPC.add(lblInstruccion);
         filaPC.add(Box.createHorizontalStrut(16));
         filaPC.add(lblBinario);
         filaPC.add(Box.createHorizontalStrut(16));
-        filaPC.add(new JLabel("Instrucciones ejecutadas (acumuladas):"));
+        filaPC.add(etiqueta("Instrucciones ejecutadas (acumuladas):"));
         filaPC.add(lblContador);
         filaPC.add(Box.createHorizontalStrut(16));
-        filaPC.add(new JLabel("Programa cargado:"));
+        filaPC.add(etiqueta("Programa cargado:"));
         filaPC.add(lblPrograma);
-        filaPC.add(new JLabel("instr."));
+        filaPC.add(etiqueta("instr."));
 
         JPanel filaEtapas = panelTransparente(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        JLabel lblEtapas = new JLabel("Etapas:");
-        lblEtapas.setFont(FUENTE_UI_NEGRITA);
+        JLabel lblEtapas = etiqueta("Etapas:");
+        lblEtapas.setFont(FUENTE_DATOS_NEGRITA);
         filaEtapas.add(lblEtapas);
         for (int i = 0; i < labelsEtapa.length; i++) {
             JLabel etapa = new JLabel(UnidadControl.ETAPAS[i], SwingConstants.CENTER);
@@ -492,9 +506,10 @@ public class MIPSEmulatorUI extends JFrame {
         filaEtapas.add(lblUltimaEtapa);
 
         filaEtapas.add(Box.createHorizontalStrut(16));
-        JLabel lblALU = new JLabel("ALU:");
-        lblALU.setFont(FUENTE_UI_NEGRITA);
+        JLabel lblALU = etiqueta("ALU:");
+        lblALU.setFont(FUENTE_DATOS_NEGRITA);
         lblALUResumen.setFont(FUENTE_DATOS);
+        lblALUResumen.setForeground(COLOR_TITULO_INFERIOR);
         filaEtapas.add(lblALU);
         filaEtapas.add(lblALUResumen);
 
