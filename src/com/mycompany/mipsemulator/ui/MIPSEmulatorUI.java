@@ -218,11 +218,11 @@ public class MIPSEmulatorUI extends JFrame {
     private final JLabel lblMensaje = new JLabel(" ");
     private final JLabel[] labelsEtapa = new JLabel[UnidadControl.ETAPAS.length];
 
-    private final JButton btnCargar = new JButton("Cargar .bin");
-    private final JButton btnEjecutar = new JButton("Ejecutar instrucción");
-    private final JButton btnEtapa = new JButton("Siguiente etapa");
-    private final JButton btnTodo = new JButton("Ejecutar hasta el final");
-    private final JButton btnReiniciar = new JButton("Reiniciar");
+    private final NeonButton btnCargar = new NeonButton("Cargar .bin");
+    private final NeonButton btnEjecutar = new NeonButton("Ejecutar instrucción");
+    private final NeonButton btnEtapa = new NeonButton("Siguiente etapa");
+    private final NeonButton btnTodo = new NeonButton("Ejecutar hasta el final");
+    private final NeonButton btnReiniciar = new NeonButton("Reiniciar");
 
     private final DefaultTableModel modeloRegistros;
     private final DefaultTableModel modeloInstrucciones;
@@ -633,30 +633,149 @@ public class MIPSEmulatorUI extends JFrame {
                 BorderFactory.createEmptyBorder(2, 6, 6, 6));
     }
 
-    private static void estilizarBoton(JButton boton, Color fondo, Color texto, Color borde) {
-        boton.setBackground(fondo);
+    private void estilizarBoton(JButton boton, Color fondo, Color texto, Color borde) {
         boton.setForeground(texto);
         boton.setFont(FUENTE_UI_NEGRITA);
-        boton.setOpaque(true);
-        boton.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(borde),
-                BorderFactory.createEmptyBorder(5, 12, 5, 12)));
         boton.setFocusPainted(false);
-        // Efecto al pasar el mouse: un tono más claro del mismo color.
-        final Color claro = aclarar(fondo, 0.12);
-        boton.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (boton.isEnabled()) {
-                    boton.setBackground(claro);
+        boton.setFocusable(false);
+        if (boton instanceof NeonButton neon) {
+            // El cuerpo se dibuja con borde brillante (resplandor violeta);
+            // la variante oscura de cada botón se reserva para el pulsado.
+            Color claro = boton == btnReiniciar
+                    ? mezclar(fondo, BOTON_ROSA, 0.45)
+                    : aclarar(fondo, 0.24);
+            neon.configurarColores(fondo, claro, texto, aclarar(fondo, 0.32));
+            neon.setBaseOscura(borde);
+            // Jerarquía: halo permanente en las dos acciones clave y más
+            // notorio en el botón principal (Ejecutar instrucción).
+            neon.setHaloPermanente(boton == btnEjecutar || boton == btnCargar);
+            neon.setHaloFuerte(boton == btnEjecutar);
+        } else {
+            boton.setBackground(fondo);
+            boton.setOpaque(true);
+            boton.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(borde),
+                    BorderFactory.createEmptyBorder(5, 12, 5, 12)));
+        }
+        boton.addPropertyChangeListener("enabled", evt -> {
+            boolean habilitado = boton.isEnabled();
+            boton.setForeground(habilitado ? texto : COLOR_INACTIVO_TEXTO);
+            boton.repaint();
+        });
+    }
+
+    /** Botón Swing dibujado a mano: degradado, esquinas redondeadas y halo neón. */
+    private static final class NeonButton extends JButton {
+        private Color colorBase = BOTON_BASE;
+        private Color colorClaro = aclarar(BOTON_BASE, 0.24);
+        private Color colorOscuro = BOTON_BASE_OSCURO;
+        private Color colorTexto = COLOR_TEXTO;
+        private Color colorBorde = COLOR_BORDE;
+        private boolean hover;
+        private boolean haloPermanente;
+        private boolean haloFuerte;
+
+        NeonButton(String texto) {
+            super(texto);
+            setOpaque(false);
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            // El tamaño lo controla getPreferredSize(): sin depender del borde
+            // ni del margin del Look and Feel, el texto queda siempre con aire
+            // y dentro del cuerpo redondeado.
+            setBorder(BorderFactory.createEmptyBorder());
+            setMargin(new java.awt.Insets(0, 0, 0, 0));
+            setForeground(colorTexto);
+            setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+                @Override public void mouseExited(MouseEvent e) { hover = false; repaint(); }
+            });
+            // Repinta al pulsar/soltar para mostrar el estado "pulsado".
+            getModel().addChangeListener(evt -> repaint());
+        }
+
+        /** Tamaño = texto + margen interno fijo (30 px de ancho, 18 de alto). */
+        @Override
+        public Dimension getPreferredSize() {
+            Dimension d = super.getPreferredSize();
+            d.width += 30;
+            d.height += 18;
+            return d;
+        }
+
+        void configurarColores(Color base, Color claro, Color texto, Color borde) {
+            colorBase = base;
+            colorClaro = claro;
+            colorTexto = texto;
+            colorBorde = borde;
+            setForeground(texto);
+            repaint();
+        }
+
+        void setBaseOscura(Color valor) {
+            colorOscuro = valor;
+            repaint();
+        }
+
+        void setHaloPermanente(boolean valor) {
+            haloPermanente = valor;
+            repaint();
+        }
+
+        void setHaloFuerte(boolean valor) {
+            haloFuerte = valor;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth();
+            int h = getHeight();
+            boolean activo = isEnabled();
+            boolean pulsado = activo && getModel().isArmed();
+            boolean brillo = activo && (hover || haloPermanente);
+            int inset = 2;
+
+            // 1) Cuerpo del botón: degradado con esquinas redondeadas.
+            Color arriba = activo
+                    ? (pulsado ? colorBase : (hover ? colorClaro : aclarar(colorBase, 0.08)))
+                    : COLOR_PANEL;
+            Color abajo = activo ? (pulsado ? colorOscuro : colorBase) : COLOR_PANEL_ALT;
+            g2.setPaint(new GradientPaint(0, inset, arriba, 0, h - inset, abajo));
+            g2.fillRoundRect(inset, inset, w - inset * 2, h - inset * 2, 13, 13);
+
+            // 2) Halo neón: anillos translúcidos alrededor del cuerpo. Se dibujan
+            //    DESPUÉS del degradado para que el resplandor realmente se vea.
+            if (brillo) {
+                int alphaBase = haloFuerte ? 55 : 38;
+                int alpha0 = hover ? alphaBase + 35 : alphaBase;
+                for (int i = 3; i >= 0; i--) {
+                    int alpha = alpha0 - i * 9;
+                    if (alpha <= 0) {
+                        continue;
+                    }
+                    g2.setColor(new Color(colorClaro.getRed(), colorClaro.getGreen(), colorClaro.getBlue(), alpha));
+                    g2.setStroke(new java.awt.BasicStroke(1.6f + i));
+                    int margen = i;
+                    g2.drawRoundRect(inset - margen, inset - margen,
+                            w - (inset - margen) * 2 - 1, h - (inset - margen) * 2 - 1,
+                            15 + 2 * margen, 15 + 2 * margen);
                 }
             }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                boton.setBackground(fondo);
-            }
-        });
+            // 3) Borde del cuerpo.
+            g2.setStroke(new java.awt.BasicStroke(1.2f));
+            g2.setColor(activo ? (hover ? colorClaro : colorBorde) : COLOR_REJA);
+            g2.drawRoundRect(inset, inset, w - inset * 2 - 1, h - inset * 2 - 1, 13, 13);
+            g2.dispose();
+
+            setForeground(activo ? colorTexto : COLOR_INACTIVO_TEXTO);
+            super.paintComponent(g);
+        }
     }
 
     private static void estilizarTabla(JTable tabla) {
@@ -712,6 +831,15 @@ public class MIPSEmulatorUI extends JFrame {
         int g = (int) Math.round(color.getGreen() + (255 - color.getGreen()) * factor);
         int b = (int) Math.round(color.getBlue() + (255 - color.getBlue()) * factor);
         return new Color(r, g, b);
+    }
+
+    /** Mezcla dos colores (factor 0..1 = peso del segundo color). */
+    private static Color mezclar(Color a, Color b, double factor) {
+        int r = (int) Math.round(a.getRed() + (b.getRed() - a.getRed()) * factor);
+        int g = (int) Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * factor);
+        int b2 = (int) Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * factor);
+        return new Color(Math.max(0, Math.min(255, r)),
+                Math.max(0, Math.min(255, g)), Math.max(0, Math.min(255, b2)));
     }
 
     /** Fondo de papel con un degradado vertical suave. */
