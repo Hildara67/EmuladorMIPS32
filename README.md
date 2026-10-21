@@ -208,64 +208,62 @@ Cualquier otra palabra se marca como **no soportada** y provoca estado `ERROR`.
 
 ## 8. Guía de la interfaz gráfica
 
-Distribución: panel superior (carga/estado + botones), centro dividido
-(izquierda: registros; derecha: RAM arriba y pestañas abajo) y barra inferior
-(PC, instrucción actual, etapas, ALU y mensaje).
+La ventana es un **cliente del núcleo**: no ejecuta instrucciones por sí misma.
+Cada botón llama a un método de `CPU` (cargar, ejecutar, reiniciar) y, al
+terminar, la interfaz vuelve a **leer el estado** (PC, registros, memorias,
+ALU y etapa actual) y repinta las tablas y etiquetas. La lógica, la lectura del
+`.bin` y las memorias viven en el paquete del procesador; la interfaz solo
+solicita acciones y muestra resultados.
 
-**Botones:** `Cargar .bin`, `Ejecutar instrucción`, `Siguiente etapa`,
-`Ejecutar hasta el final`, `Reiniciar`.
+**Distribución:** banner superior; panel central (izquierda: registros;
+derecha: RAM arriba y pestañas abajo) y barra inferior (PC, instrucción actual,
+etapas, ALU y mensaje).
+
+**Botones y qué hace cada uno:**
+
+| Botón | Acción |
+|-------|--------|
+| `Cargar .bin` | Abre un selector de archivo y pide al núcleo cargar el programa; reinicia el estado. |
+| `Ejecutar instrucción` | Completa una instrucción entera (IF → ID → EX → MEM → WB). |
+| `Siguiente etapa` | Avanza exactamente una etapa lógica de la instrucción en curso. |
+| `Ejecutar hasta el final` | Repite instrucciones hasta que el programa termina o se alcanza el límite de 100 000. |
+| `Reiniciar` | Vuelve PC, registros, memorias y ALU al estado inicial y limpia los resaltados; conserva el programa cargado. |
+
+Los botones de ejecución permanecen deshabilitados hasta que hay un programa
+cargado.
 
 **Zonas:**
 
-- **Memoria de registros:** 32 registros (Nombre, Índice, Hexadecimal, Decimal)
-  + panel de `HI`/`LO`.
-- **RAM:** matriz fija **10 segmentos × 10 direcciones** = 100 celdas. El
-  encabezado de cada fila muestra la base del segmento; el encabezado de cada
-  columna muestra `Dir n` y su desplazamiento `(+0, +4, … +36)`, de modo que
-  `dirección = base del segmento + desplazamiento`.
-- **Pestañas secundarias:** Memoria de instrucciones, ROM, Disco duro,
-  ALU / HI-LO y Log de etapas.
+- **Memoria de registros:** los 32 registros con columnas Nombre, Índice,
+  Hexadecimal y Decimal, más el panel de **Registros especiales** con `HI` y
+  `LO`. Las filas de los registros que cambiaron durante la ejecución quedan
+  resaltadas (ver la leyenda del propio panel).
+- **RAM:** las 100 palabras de 32 bits de la memoria de datos
+  (`0x00000000`–`0x0000018F`) en una tabla de dos columnas: **Dirección** y
+  **Contenido** (hexadecimal). Las celdas modificadas en la última acción y la
+  última celda consultada se distinguen mediante resaltados, explicados en la
+  leyenda de la tabla.
+- **Pestañas secundarias:**
+  - **Memoria de instrucciones:** índice, dirección, palabra binaria y mnemónico
+    del programa cargado.
+  - **ROM:** contenido de la memoria de solo lectura (índice, dirección,
+    hexadecimal y decimal).
+  - **Disco duro:** contenido de la memoria de disco (mismas columnas).
+  - **ALU / HI-LO:** operación, operandos, resultado e `HI`/`LO` de la ALU.
+  - **Log de etapas:** mensajes registrados tras cada acción, con el estado y la
+    etapa en curso.
+- **Barra inferior:** PC, instrucción actual (dirección, mnemónico y binario),
+  instrucciones ejecutadas acumuladas, cantidad de instrucciones del programa
+  cargado, etapas del procesador, última etapa procesada, resumen de la ALU y el
+  último mensaje del núcleo.
 
-**Colores** (paleta pastel *"Miel, Latte & Lavanda"*, diseñada con fondos
-claros y texto oscuro para que se lea bien incluso con luz ambiental o
-proyector):
-
-| Color | Significado |
-|-------|-------------|
-| Lavanda (`#B79BF0`) | Etapa activa durante la ejecución. |
-| Beige (`#D9CBB6`) | Etapa inactiva. |
-| Menta (`#8CE0A4`) | Badge **FIN** (estado `FINALIZADO`). |
-| Rosa (`#FF9DB8`) | Badge **ERROR** (estado `ERROR`). |
-| Amarillo (`#FFE066`) | Registro modificado. |
-| Durazno (`#FFC98A`) | Celda de RAM modificada en la última acción. |
-| Celeste (`#9FDBF5`) | Última celda de RAM consultada/modificada. |
-| Latte (`#EAD8C0`) | Fondo general de la ventana. |
-| Crema (`#FDF6EA`) | Tablas y áreas de texto. |
-| Lavanda (`#CDB6F5`) | Botones. |
-| Café latte (`#D8BE9E`) | Encabezados de tabla. |
-
-**Fondos por sección** (cada zona con su propio color, para que la interfaz no
-se vea plana):
-
-| Sección | Color |
-|---------|-------|
-| Barra superior | Lavanda claro (`#E3D2F5`) |
-| Memoria de registros | Celeste claro (`#D8ECFA`) |
-| RAM | Durazno claro (`#FBE3C8`) |
-| Vistas secundarias | Menta claro (`#DCF3E4`) |
-| Barra inferior | Beige (`#EFDFC8`) |
-
-Cada tipo de resaltado usa un color **distinto** (amarillo, durazno y celeste)
-y los encabezados de tabla van en café latte, de modo que ninguna celda se
-confunda con el encabezado.
+**Indicador de etapas:** durante la ejecución se resalta la etapa real
+(IF, ID, EX, MEM o WB). Al terminar, las etapas se apagan y aparecen los badges
+**FIN** o **ERROR**; por separado se muestra la **última etapa procesada**.
 
 **Limpieza de resaltados:** al pulsar **Reiniciar** (o al cargar un programa
-nuevo) se borran los resaltados de la corrida anterior —registros modificados
-en amarillo y celdas de RAM— para que la vista empiece limpia.
-
-**Indicador de etapas:** durante la ejecución se resalta la etapa real. Al
-terminar, las cinco etapas se apagan, aparece un badge **FIN** (menta) o
-**ERROR** (rosa) y, por separado, se muestra la **última etapa procesada**.
+nuevo) se borran los resaltados de la corrida anterior, para que la vista
+empiece limpia.
 
 **Contadores (miden cosas distintas):**
 
