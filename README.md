@@ -342,12 +342,6 @@ Resultados **verificados** ejecutando el emulador sobre los `.bin` generados.
   ejecución ni marca `ERROR`.
 - **Límite de instrucciones:** la GUI corta la ejecución a las 100 000
   instrucciones para evitar bucles infinitos.
-- **Requisito pendiente de las 6 clases del profesor**
-  (`Microprocesador`, `MemoriaDatos`, `Registros`, `ALU`, `MemoriaInstrucciones`,
-  `PC`): actualmente existen `Registros`, `ALU`, `MemoriaInstrucciones` y `PC`; el
-  coordinador es `CPU` y la memoria de datos está repartida en `RAM`/`ROM`/
-  `DiscoDuro`. **No se modifican** los paquetes ni el código de RAM/ROM/Disco
-  hasta consultarlo con el profesor.
 
 ---
 
