@@ -215,6 +215,8 @@ ALU y etapa actual) y repinta las tablas y etiquetas. La lógica, la lectura del
 `.bin` y las memorias viven en el paquete del procesador; la interfaz solo
 solicita acciones y muestra resultados.
 
+<img src="Captura_InterfazEmu.png" alt="Interfaz del emulador MIPS32" width="900">
+
 **Distribución:** banner superior; panel central (izquierda: registros;
 derecha: RAM arriba y pestañas abajo) y barra inferior (PC, instrucción actual,
 etapas, ALU y mensaje).
