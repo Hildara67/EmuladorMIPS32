@@ -140,13 +140,13 @@ instrucción hasta completar WB (sin reiniciarla ni repetir etapas).
 | `Registros` | 32 registros de propósito general + `HI`/`LO`. `$zero` (índice 0) es inmutable. |
 | `ALU` | 18 operaciones (`Operacion`). Enteros de 32 bits en complemento a dos; desbordamiento con envoltura; `MULT` → HI/LO; `DIV` → LO=cuociente, HI=residuo (divisor 0 lanza `ArithmeticException` que el control reporta sin cerrar la app). |
 | `MemoriaInstrucciones` | Carga y almacena las instrucciones (`cargar`, `cargarPalabras`). Valida archivo no vacío y longitud múltiplo de 4; `leerPalabra` valida alineación y rango del PC. Está **separada** de la memoria de datos. |
-| `RAM` | Memoria de datos de 100 palabras de 32 bits. Lectura/escritura de palabra (LW/SW) y de byte (LB/SB), little-endian. |
+| `RAM` | Memoria de datos de 100 palabras de 32 bits, organizada como matriz **10 segmentos × 10 direcciones**. Lectura/escritura de palabra (LW/SW) y de byte (LB/SB), little-endian. |
 | `ROM` | 100 palabras de 32 bits de **solo lectura** durante la ejecución; solo permite carga inicial con `cargarPalabra()`. |
 | `DiscoDuro` | Almacenamiento secundario de 100 palabras de 32 bits (lectura/escritura). |
 | `Instruccion` | Contenedor de los campos decodificados y del mnemónico; `toBinario()` devuelve la representación de 32 bits. |
 | `Decodificador` | Interpreta una palabra de 32 bits y determina formato (R/I/J), mnemónico y campos. Marca como no soportadas las palabras desconocidas. |
 | `UnidadControl` | Implementa IF/ID/EX/MEM/WB, el estado de la instrucción en curso, el mensaje de estado y la detención (fin de programa, error o límite de instrucciones). |
-| `MIPSEmulatorUI` | Ventana Swing. Muestra registros, matriz RAM 10×10, pestañas secundarias y barra inferior. Solo lee estado de `CPU`. |
+| `MIPSEmulatorUI` | Ventana Swing. Muestra registros, tabla de RAM (100 palabras), pestañas secundarias y barra inferior. Solo lee estado de `CPU`. |
 | `GeneradorBinario` (test) | Codifica instrucciones MIPS a palabras de 32 bits y escribe `.bin`; contiene los 5 programas de validación. No es parte del emulador. |
 | `PruebasEmulador` (test) | Conjunto de pruebas en Java puro que imprime `[PASS]/[FAIL]` y devuelve salida 0 si todo pasa. |
 
@@ -163,8 +163,16 @@ instrucción hasta completar WB (sin reiniciarla ni repetir etapas).
 - Cada palabra ocupa **4 bytes**; palabras consecutivas distan `+4`.
 - La **memoria de instrucciones** es independiente y se direcciona por PC:
   la instrucción *i* está en `0x00000000 + i*4`.
-- En la **RAM**, la dirección de una palabra es `RAM.BASE + índice*4`
-  (índice de 0 a 99). Los accesos no alineados o fuera de rango se rechazan
+- La **RAM** se organiza internamente como una **matriz de 10 segmentos
+  (columnas) × 10 direcciones (filas)**: 100 celdas, cada una con una palabra de
+  32 bits. Cada segmento ocupa 10 direcciones (40 bytes).
+- La dirección física de la celda `(segmento, dirección)` es
+  `RAM.BASE + (segmento*10 + dirección)*4`. Ejemplo: `[2][3]` →
+  `0x0000005C`. La conversión inversa es
+  `segmento = (física - BASE) / 40` y
+  `dirección = ((física - BASE) % 40) / 4`.
+- La CPU entrega direcciones planas (`rs + imm`) y la RAM las descompone en
+  segmento y dirección. Los accesos no alineados o fuera de rango se rechazan
   con excepción controlada.
 - La **RAM** permite byte (LB/SB) usando el byte menos significativo primero
   (little-endian). La **ROM** rechaza cualquier escritura durante la ejecución.
@@ -242,9 +250,11 @@ cargado.
   resaltadas (ver la leyenda del propio panel).
 - **RAM:** las 100 palabras de 32 bits de la memoria de datos
   (`0x00000000`–`0x0000018F`) en una tabla de dos columnas: **Dirección** y
-  **Contenido** (hexadecimal). Las celdas modificadas en la última acción y la
-  última celda consultada se distinguen mediante resaltados, explicados en la
-  leyenda de la tabla.
+  **Contenido** (hexadecimal). Internamente la RAM se modela como una matriz de
+  10 segmentos × 10 direcciones; la tabla muestra las celdas en orden de
+  dirección física. Las celdas modificadas en la última acción y la última celda
+  consultada se distinguen mediante resaltados, explicados en la leyenda de la
+  tabla.
 - **Pestañas secundarias:**
   - **Memoria de instrucciones:** índice, dirección, palabra binaria y mnemónico
     del programa cargado.
