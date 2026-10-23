@@ -902,8 +902,10 @@ public class MIPSEmulatorUI extends JFrame {
     private void configurarEventos() {
         btnCargar.addActionListener(e -> cargarArchivo());
         btnEjecutar.addActionListener(e -> {
-            cpu.ejecutarInstruccion();
-            registrarEnLog();
+            do {
+                cpu.ejecutarEtapa();
+                registrarEnLog();
+            } while (cpu.hayInstruccionEnCurso() && !cpu.estaDetenida());
             actualizarVista();
         });
         btnEtapa.addActionListener(e -> {

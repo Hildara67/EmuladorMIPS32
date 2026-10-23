@@ -99,6 +99,11 @@ public class CPU {
         return unidadControl.estaDetenida();
     }
 
+    /** true si hay una instrucción con etapas pendientes. */
+    public boolean hayInstruccionEnCurso() {
+        return unidadControl.instruccionEnCurso();
+    }
+
     /**
      * Estado real del emulador para la GUI:
      * SIN_PROGRAMA, LISTO, EJECUTANDO, FINALIZADO o ERROR.
