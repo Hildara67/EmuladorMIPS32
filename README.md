@@ -262,8 +262,10 @@ cargado.
     hexadecimal y decimal).
   - **Disco duro:** contenido de la memoria de disco (mismas columnas).
   - **ALU / HI-LO:** operación, operandos, resultado e `HI`/`LO` de la ALU.
-  - **Log de etapas:** mensajes registrados tras cada acción, con el estado y la
-    etapa en curso.
+  - **Log de etapas:** mensajes registrados después de cada etapa, con el estado,
+    la instrucción en formato ensamblador, los nombres y valores de los registros
+    usados y, en accesos a RAM, el segmento y la dirección. **Ejecutar
+    instrucción** registra las cinco etapas (IF, ID, EX, MEM y WB).
 - **Barra inferior:** PC, instrucción actual (dirección, mnemónico y binario),
   instrucciones ejecutadas acumuladas, cantidad de instrucciones del programa
   cargado, etapas del procesador, última etapa procesada, resumen de la ALU y el
