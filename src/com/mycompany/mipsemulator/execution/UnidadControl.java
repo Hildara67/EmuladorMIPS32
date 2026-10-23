@@ -110,8 +110,7 @@ public class UnidadControl {
             pcSiguiente = pcActual + 4;
             pc.set(pcSiguiente); // avance normal en 4 bytes
             pcInstruccionActual = pcActual;
-            mensaje = "IF: instrucción " + instruccionActual.getMnemonico()
-                    + " leída en 0x" + hex(pcActual);
+            mensaje = "IF: 0x" + hex(pcActual) + ": " + formatoInstruccion();
         } catch (IllegalArgumentException e) {
             detener("IF: " + e.getMessage(), true);
         }
@@ -135,11 +134,9 @@ public class UnidadControl {
         }
         valorRs = registros.read(instruccionActual.getRs());
         valorRt = registros.read(instruccionActual.getRt());
-        mensaje = "ID: " + instruccionActual.getMnemonico()
-                + " opcode=" + instruccionActual.getOpcode()
-                + " funct=" + instruccionActual.getFunct()
-                + " rs=" + valorRs + " rt=" + valorRt
-                + " imm=" + instruccionActual.getImm();
+        String valores = valoresRegistros();
+        mensaje = "ID: " + formatoInstruccion()
+                + (valores.isEmpty() ? "" : " | " + valores);
     }
 
     // ------------------------------------------------------------------
@@ -155,6 +152,7 @@ public class UnidadControl {
         int rt = valorRt;
         int imm = ins.getImm();
         int immU = ins.getImmSinSigno();
+        boolean errorALU = false;
 
         try {
             switch (m) {
@@ -180,6 +178,7 @@ public class UnidadControl {
                         alu.ejecutar(Operacion.DIV, rs, rt);
                     } catch (ArithmeticException ex) {
                         mensaje = "EX: " + ex.getMessage() + " (resultado indefinido; LO=0, HI=0).";
+                        errorALU = true;
                     }
                     break;
                 case "MFHI":
@@ -231,8 +230,9 @@ public class UnidadControl {
             detener("EX: " + e.getMessage());
             return;
         }
-        mensaje = "EX: " + m + " -> ALU resultado=" + alu.getResultado()
-                + " (HI=" + alu.getHi() + ", LO=" + alu.getLo() + ")";
+        if (!errorALU) {
+            mensaje = describirEX(m);
+        }
     }
 
     private int calcularObjetivoSalto() {
@@ -265,27 +265,36 @@ public class UnidadControl {
                     ultimaDireccionDatos = direccionEfectiva;
                     accesoEscritura = false;
                     datoMemoria = leerPalabra(direccionEfectiva);
-                    mensaje = "MEM: LW lee 0x" + hex(datoMemoria) + " de 0x" + hex(direccionEfectiva);
+                    mensaje = "MEM: " + formatoInstruccion() + ": lee 0x"
+                            + hex(datoMemoria) + " de 0x" + hex(direccionEfectiva)
+                            + ubicacionRAM(direccionEfectiva);
                     break;
                 case "LB":
                     ultimaDireccionDatos = direccionEfectiva;
                     accesoEscritura = false;
                     datoMemoria = leerByte(direccionEfectiva);
-                    mensaje = "MEM: LB lee 0x" + hex(datoMemoria) + " de 0x" + hex(direccionEfectiva);
+                    mensaje = "MEM: " + formatoInstruccion() + ": lee 0x"
+                            + hex(datoMemoria) + " de 0x" + hex(direccionEfectiva)
+                            + ubicacionRAM(direccionEfectiva);
                     break;
                 case "SW":
                     ultimaDireccionDatos = direccionEfectiva;
                     accesoEscritura = true;
                     escribirPalabra(direccionEfectiva, valorRt);
-                    mensaje = "MEM: SW escribe 0x" + hex(valorRt) + " en 0x" + hex(direccionEfectiva);
+                    mensaje = "MEM: " + formatoInstruccion() + ": escribe 0x"
+                            + hex(valorRt) + " en 0x" + hex(direccionEfectiva)
+                            + ubicacionRAM(direccionEfectiva);
                     break;
                 case "SB":
                     ultimaDireccionDatos = direccionEfectiva;
                     accesoEscritura = true;
                     escribirByte(direccionEfectiva, valorRt);
-                    mensaje = "MEM: SB escribe 0x" + hex(valorRt & 0xFF) + " en 0x" + hex(direccionEfectiva);
+                    mensaje = "MEM: " + formatoInstruccion() + ": escribe 0x"
+                            + hex(valorRt & 0xFF) + " en 0x" + hex(direccionEfectiva)
+                            + ubicacionRAM(direccionEfectiva);
                     break;
                 default:
+                    mensaje = "MEM: sin acceso a memoria.";
                     break;
             }
         } catch (IllegalArgumentException | UnsupportedOperationException e) {
@@ -357,6 +366,57 @@ public class UnidadControl {
         }
         Instruccion ins = instruccionActual;
         String m = ins.getMnemonico();
+
+        // Destino del WB, solo para describir el resultado en el log.
+        int indiceDestino = -1;
+        int valorNuevo = 0;
+        switch (m) {
+            case "ADD":
+            case "SUB":
+            case "AND":
+            case "OR":
+            case "XOR":
+            case "NOR":
+            case "SLT":
+            case "SLTU":
+            case "SLL":
+            case "SRL":
+            case "SRA":
+                indiceDestino = ins.getRd();
+                valorNuevo = alu.getResultado();
+                break;
+            case "MFHI":
+                indiceDestino = ins.getRd();
+                valorNuevo = alu.getHi();
+                break;
+            case "MFLO":
+                indiceDestino = ins.getRd();
+                valorNuevo = alu.getLo();
+                break;
+            case "ADDI":
+            case "ANDI":
+            case "ORI":
+            case "SLTI":
+            case "LUI":
+                indiceDestino = ins.getRt();
+                valorNuevo = alu.getResultado();
+                break;
+            case "LW":
+            case "LB":
+                indiceDestino = ins.getRt();
+                valorNuevo = datoMemoria;
+                break;
+            case "JAL":
+                indiceDestino = 31;
+                valorNuevo = pcSiguiente;
+                break;
+            default:
+                break;
+        }
+        int valorAnterior = indiceDestino >= 0
+                ? registros.read(indiceDestino)
+                : 0;
+
         switch (m) {
             case "ADD":
             case "SUB":
@@ -398,7 +458,21 @@ public class UnidadControl {
                 break;
         }
         if (!detenida) {
-            mensaje = "WB: " + m + " finalizada.";
+            if ("SYSCALL".equals(m)) {
+                // Conserva el mensaje del servicio ejecutado.
+            } else if (indiceDestino >= 0) {
+                boolean esDireccion = "JAL".equals(m);
+                String valor = esDireccion
+                        ? "0x" + hex(valorNuevo)
+                        : String.valueOf(valorNuevo);
+                String antes = esDireccion
+                        ? "0x" + hex(valorAnterior)
+                        : String.valueOf(valorAnterior);
+                mensaje = "WB: " + nombre(indiceDestino) + " = " + valor
+                        + " (antes " + antes + ")";
+            } else {
+                mensaje = "WB: " + m + " sin escritura de registro.";
+            }
         }
         contadorInstrucciones++;
         if (!detenida && contadorInstrucciones >= limiteInstrucciones) {
@@ -542,6 +616,209 @@ public class UnidadControl {
             default:
                 etapaActual = 0;
                 break;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Descripción legible para el log de etapas
+    // ------------------------------------------------------------------
+    private String nombre(int indice) {
+        return registros.getNombre(indice);
+    }
+
+    private void agregarValor(StringBuilder sb, int indice, int valor) {
+        if (sb.length() > 0) {
+            sb.append(", ");
+        }
+        sb.append(nombre(indice)).append("=").append(valor);
+    }
+
+    private String formatoInstruccion() {
+        Instruccion ins = instruccionActual;
+        if (ins == null) {
+            return "";
+        }
+        String m = ins.getMnemonico();
+        int rs = ins.getRs();
+        int rt = ins.getRt();
+        int rd = ins.getRd();
+        int imm = ins.getImm();
+        switch (m) {
+            case "ADD":
+            case "SUB":
+            case "AND":
+            case "OR":
+            case "XOR":
+            case "NOR":
+            case "SLT":
+            case "SLTU":
+                return m + " " + nombre(rd) + ", " + nombre(rs) + ", " + nombre(rt);
+            case "SLL":
+            case "SRL":
+            case "SRA":
+                return m + " " + nombre(rd) + ", " + nombre(rt) + ", " + ins.getShamt();
+            case "MULT":
+            case "DIV":
+                return m + " " + nombre(rs) + ", " + nombre(rt);
+            case "MFHI":
+            case "MFLO":
+                return m + " " + nombre(rd);
+            case "JR":
+                return "JR " + nombre(rs);
+            case "SYSCALL":
+            case "NOP":
+                return m;
+            case "ADDI":
+            case "ANDI":
+            case "ORI":
+            case "SLTI":
+                return m + " " + nombre(rt) + ", " + nombre(rs) + ", " + imm;
+            case "LUI":
+                return "LUI " + nombre(rt) + ", 0x"
+                        + Integer.toHexString(ins.getImmSinSigno());
+            case "LW":
+            case "SW":
+            case "LB":
+            case "SB":
+                return m + " " + nombre(rt) + ", " + imm + "(" + nombre(rs) + ")";
+            case "BEQ":
+            case "BNE":
+                return m + " " + nombre(rs) + ", " + nombre(rt) + ", 0x"
+                        + hex(pcSiguiente + (imm << 2));
+            case "J":
+            case "JAL":
+                return m + " 0x" + hex(calcularObjetivoSalto());
+            default:
+                return m;
+        }
+    }
+
+    private String valoresRegistros() {
+        Instruccion ins = instruccionActual;
+        if (ins == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        switch (ins.getMnemonico()) {
+            case "ADD":
+            case "SUB":
+            case "AND":
+            case "OR":
+            case "XOR":
+            case "NOR":
+            case "SLT":
+            case "SLTU":
+            case "SLL":
+            case "SRL":
+            case "SRA":
+            case "MULT":
+            case "DIV":
+            case "BEQ":
+            case "BNE":
+                agregarValor(sb, ins.getRs(), valorRs);
+                agregarValor(sb, ins.getRt(), valorRt);
+                break;
+            case "MFHI":
+            case "MFLO":
+                sb.append("HI=").append(alu.getHi()).append(", LO=").append(alu.getLo());
+                break;
+            case "JR":
+            case "ADDI":
+            case "ANDI":
+            case "ORI":
+            case "SLTI":
+            case "LW":
+            case "LB":
+                agregarValor(sb, ins.getRs(), valorRs);
+                break;
+            case "SW":
+            case "SB":
+                agregarValor(sb, ins.getRs(), valorRs);
+                agregarValor(sb, ins.getRt(), valorRt);
+                break;
+            case "SYSCALL":
+                agregarValor(sb, 2, registros.read(2));
+                agregarValor(sb, 4, registros.read(4));
+                break;
+            default:
+                break;
+        }
+        return sb.toString();
+    }
+
+    private String ubicacionRAM(int direccion) {
+        if (!enRango(direccion, RAM.BASE, RAM.TAMANO_BYTES)) {
+            return "";
+        }
+        int desplazamiento = direccion - RAM.BASE;
+        int segmento = desplazamiento / RAM.TAMANO_SEGMENTO_BYTES;
+        int fila = (desplazamiento % RAM.TAMANO_SEGMENTO_BYTES) / 4;
+        int byteEnPalabra = desplazamiento % 4;
+        String ubicacion = " [segmento " + segmento + ", dirección " + fila;
+        if (byteEnPalabra != 0) {
+            ubicacion += ", byte " + byteEnPalabra;
+        }
+        return ubicacion + "]";
+    }
+
+    private String describirEX(String m) {
+        Instruccion ins = instruccionActual;
+        switch (m) {
+            case "ADD":
+            case "SUB":
+            case "AND":
+            case "OR":
+            case "XOR":
+            case "NOR":
+            case "SLT":
+            case "SLTU":
+            case "SLL":
+            case "SRL":
+            case "SRA":
+                return "EX: " + formatoInstruccion() + " -> " + nombre(ins.getRd())
+                        + " = " + alu.getResultado();
+            case "ADDI":
+            case "ANDI":
+            case "ORI":
+            case "SLTI":
+                return "EX: " + formatoInstruccion() + " -> " + nombre(ins.getRt())
+                        + " = " + alu.getResultado();
+            case "LUI":
+                return "EX: " + formatoInstruccion() + " -> 0x"
+                        + hex(alu.getResultado());
+            case "MULT":
+            case "DIV":
+            case "MFHI":
+            case "MFLO":
+                return "EX: " + formatoInstruccion() + " -> HI=" + alu.getHi()
+                        + ", LO=" + alu.getLo();
+            case "LW":
+            case "SW":
+            case "LB":
+            case "SB":
+                return "EX: " + formatoInstruccion() + " -> dirección 0x"
+                        + hex(direccionEfectiva) + ubicacionRAM(direccionEfectiva);
+            case "BEQ":
+            case "BNE": {
+                boolean iguales = valorRs == valorRt;
+                boolean salta = "BEQ".equals(m) ? iguales : !iguales;
+                return "EX: " + formatoInstruccion() + " (" + nombre(ins.getRs())
+                        + "=" + valorRs + (iguales ? " == " : " != ") + nombre(ins.getRt())
+                        + "=" + valorRt + ") -> " + (salta ? "salta" : "no salta");
+            }
+            case "J":
+            case "JAL":
+                return "EX: " + formatoInstruccion() + " -> 0x"
+                        + hex(calcularObjetivoSalto());
+            case "JR":
+                return "EX: JR " + nombre(ins.getRs()) + " (0x" + hex(valorRs)
+                        + ") -> 0x" + hex(pc.get());
+            case "SYSCALL":
+                return "EX: SYSCALL (servicio $v0=" + registros.read(2) + ")";
+            case "NOP":
+                return "EX: NOP";
+            default:
+                return "EX: " + m;
         }
     }
 
