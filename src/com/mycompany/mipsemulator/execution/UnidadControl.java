@@ -282,16 +282,14 @@ public class UnidadControl {
                     accesoEscritura = true;
                     escribirPalabra(direccionEfectiva, valorRt);
                     mensaje = "MEM: " + formatoInstruccion() + ": escribe 0x"
-                            + hex(valorRt) + " en 0x" + hex(direccionEfectiva)
-                            + ubicacionRAM(direccionEfectiva);
+                            + hex(valorRt) + " en 0x" + hex(direccionEfectiva);
                     break;
                 case "SB":
                     ultimaDireccionDatos = direccionEfectiva;
                     accesoEscritura = true;
                     escribirByte(direccionEfectiva, valorRt);
                     mensaje = "MEM: " + formatoInstruccion() + ": escribe 0x"
-                            + hex(valorRt & 0xFF) + " en 0x" + hex(direccionEfectiva)
-                            + ubicacionRAM(direccionEfectiva);
+                            + hex(valorRt & 0xFF) + " en 0x" + hex(direccionEfectiva);
                     break;
                 default:
                     mensaje = "MEM: sin acceso a memoria.";
@@ -797,7 +795,7 @@ public class UnidadControl {
             case "LB":
             case "SB":
                 return "EX: " + formatoInstruccion() + " -> dirección 0x"
-                        + hex(direccionEfectiva) + ubicacionRAM(direccionEfectiva);
+                        + hex(direccionEfectiva);
             case "BEQ":
             case "BNE": {
                 boolean iguales = valorRs == valorRt;
